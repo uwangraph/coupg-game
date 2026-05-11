@@ -1,0 +1,12 @@
+{
+  "name": "coup-game",
+  "private": true,
+  "workspaces": ["worker", "frontend"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w worker\" \"npm run dev -w frontend\"",
+    "deploy": "npm run deploy -w worker && npm run build -w frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
