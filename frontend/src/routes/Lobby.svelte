@@ -12,7 +12,9 @@
     loading = true;
     localError = "";
     try {
-      const res = await fetch("/rooms", {
+      const isProd = !location.host.includes("localhost");
+      const apiBase = isProd ? "https://coup-game-worker.uwangraph.workers.dev" : "";
+      const res = await fetch(`${apiBase}/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),

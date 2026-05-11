@@ -39,8 +39,12 @@ class GameStore {
   }
 
   private _openSocket() {
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const url = `${proto}://${location.host}/rooms/${this.roomCode}/ws`;
+    const isProd = !location.host.includes("localhost");
+    const baseUrl = isProd 
+      ? "coup-game-worker.uwangraph.workers.dev" 
+      : location.host;
+    const proto = isProd ? "wss" : (location.protocol === "https:" ? "wss" : "ws");
+    const url = `${proto}://${baseUrl}/rooms/${this.roomCode}/ws`;
 
     this.status = "connecting";
     this.error = null;

@@ -278,49 +278,59 @@ export class GameRoom implements DurableObject {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
+    try {
+      const url = new URL(request.url);
 
-    // CORS preflight
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: corsHeaders(),
-      });
+      // CORS preflight
+      if (request.method === "OPTIONS") {
+        return new Response(null, { headers: corsHeaders() });
+      }
+
+      // POST /rooms — create or get room
+      if (url.pathname === "/rooms" && request.method === "POST") {
+        let code: string;
+        try {
+          const body = await request.json<{ code?: string }>().catch(() => ({}));
+          code = body.code ? body.code.toUpperCase().slice(0, 6) : generateCode();
+        } catch {
+          code = generateCode();
+        }
+        
+        // Ensure the DO namespace exists
+        if (!env.GAME_ROOM) {
+          return new Response("Error: GAME_ROOM binding missing in Worker", { status: 500 });
+        }
+
+        return new Response(JSON.stringify({ code }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders() },
+        });
+      }
+
+      // GET /rooms/:code/state
+      const stateMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,6})\/state$/);
+      if (stateMatch) {
+        const id = env.GAME_ROOM.idFromName(stateMatch[1]);
+        const stub = env.GAME_ROOM.get(id);
+        const resp = await stub.fetch(new Request("https://internal/state"));
+        return new Response(await resp.text(), {
+          headers: { "Content-Type": "application/json", ...corsHeaders() },
+        });
+      }
+
+      // WebSocket upgrade — /rooms/:code/ws
+      const wsMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,6})\/ws$/);
+      if (wsMatch) {
+        const id = env.GAME_ROOM.idFromName(wsMatch[1]);
+        const stub = env.GAME_ROOM.get(id);
+        return stub.fetch(
+          new Request(request.url.replace(url.pathname, "/ws"), request)
+        );
+      }
+
+      return new Response("Path not found: " + url.pathname, { status: 404 });
+    } catch (err: any) {
+      return new Response("Worker Internal Error: " + err.message + "\n" + err.stack, { status: 500 });
     }
-
-    // POST /rooms — create or get room
-    if (url.pathname === "/rooms" && request.method === "POST") {
-      const body = await request.json<{ code?: string }>();
-      const code = body.code
-        ? body.code.toUpperCase().slice(0, 6)
-        : generateCode();
-      const id = env.GAME_ROOM.idFromName(code);
-      return new Response(JSON.stringify({ code }), {
-        headers: { "Content-Type": "application/json", ...corsHeaders() },
-      });
-    }
-
-    // GET /rooms/:code/state
-    const stateMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,6})\/state$/);
-    if (stateMatch) {
-      const id = env.GAME_ROOM.idFromName(stateMatch[1]);
-      const stub = env.GAME_ROOM.get(id);
-      const resp = await stub.fetch(new Request("https://internal/state"));
-      return new Response(await resp.text(), {
-        headers: { "Content-Type": "application/json", ...corsHeaders() },
-      });
-    }
-
-    // WebSocket upgrade — /rooms/:code/ws
-    const wsMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,6})\/ws$/);
-    if (wsMatch) {
-      const id = env.GAME_ROOM.idFromName(wsMatch[1]);
-      const stub = env.GAME_ROOM.get(id);
-      return stub.fetch(
-        new Request(request.url.replace(url.pathname, "/ws"), request)
-      );
-    }
-
-    return new Response("Not found", { status: 404 });
   },
 } satisfies ExportedHandler<Env>;
 
