@@ -4,6 +4,7 @@
   "workspaces": ["worker", "frontend"],
   "scripts": {
     "dev": "concurrently \"npm run dev -w worker\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w frontend",
     "deploy": "npm run deploy -w worker && npm run build -w frontend"
   },
   "devDependencies": {
