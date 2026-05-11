@@ -253,7 +253,9 @@ export class GameRoom implements DurableObject {
       currentPlayerIndex: this.gameState.currentPlayerIndex,
       pendingAction: this.gameState.pendingAction,
       loseInfluenceTarget: this.gameState.loseInfluenceTarget,
-      exchangeCards: this.gameState.phase === "exchange_select" && me
+      exchangeCards: this.gameState.phase === "exchange_select" 
+        && me 
+        && this.gameState.players[this.gameState.currentPlayerIndex]?.id === playerId
         ? this.gameState.exchangeCards
         : null,
       myCards: me ? me.cards : [],
