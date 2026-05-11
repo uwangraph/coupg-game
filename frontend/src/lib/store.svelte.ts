@@ -44,7 +44,8 @@ class GameStore {
       ? "coup-game-worker.uwangraph.workers.dev" 
       : location.host;
     const proto = isProd ? "wss" : (location.protocol === "https:" ? "wss" : "ws");
-    const url = `${proto}://${baseUrl}/rooms/${this.roomCode}/ws`;
+    const nameParam = encodeURIComponent(this.myName);
+    const url = `${proto}://${baseUrl}/rooms/${this.roomCode}/ws?name=${nameParam}`;
 
     this.status = "connecting";
     this.error = null;

@@ -31,14 +31,12 @@ interface Env {
 
 export class GameRoom implements DurableObject {
   private state: DurableObjectState;
-  private sessions: Map<WebSocket, string> = new Map(); // ws → playerId
-  private gameState!: GameState;
+  private gameState: GameState | null = null;
 
   constructor(state: DurableObjectState, _env: Env) {
     this.state = state;
     this.state.blockConcurrencyWhile(async () => {
-      const saved = await this.state.storage.get<GameState>("gameState");
-      this.gameState = saved ?? createInitialState(this.getRoomCode());
+      this.gameState = await this.state.storage.get<GameState>("gameState") ?? null;
     });
   }
 
@@ -53,13 +51,57 @@ export class GameRoom implements DurableObject {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname === "/initialize") {
+      try {
+        if (!this.gameState) {
+          const code = url.searchParams.get("code") || this.getRoomCode();
+          this.gameState = createInitialState(code);
+          await this.state.storage.put("gameState", this.gameState);
+        }
+        return new Response("Initialized");
+      } catch (err: any) {
+        return new Response("Error: " + err.message, { status: 500 });
+      }
+    }
+
     if (url.pathname === "/ws") {
       const upgradeHeader = request.headers.get("Upgrade");
       if (!upgradeHeader || upgradeHeader !== "websocket") {
         return new Response("Expected WebSocket", { status: 426 });
       }
+
+      const name = url.searchParams.get("name");
+      if (!name || !this.gameState) {
+        return new Response("Nama atau Room tidak valid", { status: 400 });
+      }
+
+      let player = this.gameState.players.find((p) => p.name === name);
+      let playerId: string;
+
+      if (player) {
+        playerId = player.id;
+        player.connected = true;
+      } else {
+        if (this.gameState.phase !== "lobby") {
+          return new Response("Game sudah berjalan", { status: 403 });
+        }
+        if (this.gameState.players.length >= 6) {
+          return new Response("Room penuh", { status: 403 });
+        }
+        playerId = crypto.randomUUID();
+        this.gameState.players.push({
+          id: playerId,
+          name: name.slice(0, 20),
+          coins: 0,
+          cards: [],
+          connected: true,
+        });
+      }
+      
+      await this.saveAndBroadcast();
+
       const [client, server] = Object.values(new WebSocketPair()) as [WebSocket, WebSocket];
-      this.handleWebSocket(server);
+      this.state.acceptWebSocket(server, [playerId]); 
       return new Response(null, { status: 101, webSocket: client });
     }
 
@@ -74,14 +116,11 @@ export class GameRoom implements DurableObject {
   // WebSocket lifecycle
   // ----------------------------------------------------------
 
-  private handleWebSocket(ws: WebSocket) {
-    this.state.acceptWebSocket(ws);
-  }
-
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer) {
-    const playerId = this.sessions.get(ws);
-    let msg: ClientMessage;
+    const tags = this.state.getTags(ws);
+    const playerId = tags[0]; 
 
+    let msg: ClientMessage;
     try {
       msg = JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw));
     } catch {
@@ -97,17 +136,18 @@ export class GameRoom implements DurableObject {
     }
   }
 
-  async webSocketOpen(ws: WebSocket) {
-    // Player ID will be assigned on "join" message
-  }
-
   async webSocketClose(ws: WebSocket) {
-    const playerId = this.sessions.get(ws);
-    this.sessions.delete(ws);
-    if (playerId) {
+    const tags = this.state.getTags(ws);
+    const playerId = tags[0];
+    if (playerId && this.gameState) {
       const player = this.gameState.players.find((p) => p.id === playerId);
-      if (player) player.connected = false;
-      await this.saveAndBroadcast();
+      if (player) {
+        const activeSockets = this.state.getWebSockets(playerId);
+        if (activeSockets.length === 0) {
+          player.connected = false;
+          await this.saveAndBroadcast();
+        }
+      }
     }
   }
 
@@ -125,7 +165,7 @@ export class GameRoom implements DurableObject {
     msg: ClientMessage
   ) {
     if (msg.type === "join") {
-      await this.handleJoin(ws, msg.name);
+      await this.saveAndBroadcast();
       return;
     }
 
@@ -134,40 +174,33 @@ export class GameRoom implements DurableObject {
       return;
     }
 
+    if (!this.gameState) return;
+
     switch (msg.type) {
       case "start_game":
         this.gameState = startGame(this.gameState);
         break;
-
       case "action":
         this.gameState = handleAction(this.gameState, playerId, msg.action, msg.targetId);
         break;
-
       case "challenge":
         this.gameState = handleChallenge(this.gameState, playerId);
         break;
-
       case "pass":
         this.gameState = handlePass(this.gameState, playerId);
         break;
-
       case "block":
         this.gameState = handleBlock(this.gameState, playerId, msg.character);
         break;
-
       case "challenge_block":
-        // Reuse challenge handler — context is block_challenge phase
         this.gameState = handleChallenge(this.gameState, playerId);
         break;
-
       case "accept_block":
         this.gameState = handlePass(this.gameState, playerId);
         break;
-
       case "lose_influence":
         this.gameState = handleLoseInfluence(this.gameState, playerId, msg.cardIndex);
         break;
-
       case "exchange_select":
         this.gameState = handleExchangeSelect(this.gameState, playerId, msg.cardIndexes);
         break;
@@ -176,72 +209,31 @@ export class GameRoom implements DurableObject {
     await this.saveAndBroadcast();
   }
 
-  // ----------------------------------------------------------
-  // Join
-  // ----------------------------------------------------------
-
-  private async handleJoin(ws: WebSocket, name: string) {
-    if (this.gameState.phase !== "lobby") {
-      // Reconnect existing player
-      const existing = this.gameState.players.find((p) => p.name === name);
-      if (existing) {
-        existing.connected = true;
-        this.sessions.set(ws, existing.id);
-        await this.saveAndBroadcast();
-        return;
-      }
-      this.send(ws, { type: "error", message: "Game sudah berjalan" });
-      return;
-    }
-
-    if (this.gameState.players.length >= 6) {
-      this.send(ws, { type: "error", message: "Room sudah penuh" });
-      return;
-    }
-
-    const playerId = crypto.randomUUID();
-    const player: Player = {
-      id: playerId,
-      name: name.slice(0, 20),
-      coins: 0,
-      cards: [],
-      connected: true,
-    };
-
-    this.gameState.players.push(player);
-    this.sessions.set(ws, playerId);
-    await this.saveAndBroadcast();
-  }
-
-  // ----------------------------------------------------------
-  // Broadcast
-  // ----------------------------------------------------------
-
   private async saveAndBroadcast() {
+    if (!this.gameState) return;
     await this.state.storage.put("gameState", this.gameState);
-    for (const [ws, playerId] of this.sessions.entries()) {
+    
+    const allSockets = this.state.getWebSockets();
+    for (const ws of allSockets) {
       try {
-        const view = this.buildView(playerId);
-        this.send(ws, { type: "state", state: view });
-      } catch {
-        // ignore closed sockets
-      }
+        const tags = this.state.getTags(ws);
+        const playerId = tags[0];
+        if (playerId) {
+          const view = this.buildView(playerId);
+          this.send(ws, { type: "state", state: view });
+        }
+      } catch { /* ignore */ }
     }
   }
 
   private send(ws: WebSocket, msg: ServerMessage) {
     try {
       ws.send(JSON.stringify(msg));
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }
 
-  // ----------------------------------------------------------
-  // Build personalised state view
-  // ----------------------------------------------------------
-
-  private buildView(playerId: string): import("./types").GameStateView {
+  private buildView(playerId: string): GameStateView {
+    if (!this.gameState) throw new Error("No game state");
     const me = this.gameState.players.find((p) => p.id === playerId)!;
     const players: PlayerView[] = this.gameState.players.map((p) => ({
       id: p.id,
@@ -281,12 +273,10 @@ export default {
     try {
       const url = new URL(request.url);
 
-      // CORS preflight
       if (request.method === "OPTIONS") {
         return new Response(null, { headers: corsHeaders() });
       }
 
-      // POST /rooms — create or get room
       if (url.pathname === "/rooms" && request.method === "POST") {
         let code: string;
         try {
@@ -296,17 +286,15 @@ export default {
           code = generateCode();
         }
         
-        // Ensure the DO namespace exists
-        if (!env.GAME_ROOM) {
-          return new Response("Error: GAME_ROOM binding missing in Worker", { status: 500 });
-        }
+        const id = env.GAME_ROOM.idFromName(code);
+        const stub = env.GAME_ROOM.get(id);
+        await stub.fetch(new Request(`http://game/initialize?code=${code}`));
 
         return new Response(JSON.stringify({ code }), {
           headers: { "Content-Type": "application/json", ...corsHeaders() },
         });
       }
 
-      // GET /rooms/:code/state
       const stateMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,6})\/state$/);
       if (stateMatch) {
         const id = env.GAME_ROOM.idFromName(stateMatch[1]);
@@ -317,7 +305,6 @@ export default {
         });
       }
 
-      // WebSocket upgrade — /rooms/:code/ws
       const wsMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,6})\/ws$/);
       if (wsMatch) {
         const id = env.GAME_ROOM.idFromName(wsMatch[1]);
@@ -329,14 +316,10 @@ export default {
 
       return new Response("Path not found: " + url.pathname, { status: 404 });
     } catch (err: any) {
-      return new Response("Worker Internal Error: " + err.message + "\n" + err.stack, { status: 500 });
+      return new Response("Worker Internal Error: " + err.message, { status: 500 });
     }
   },
 } satisfies ExportedHandler<Env>;
-
-// ============================================================
-// Helpers
-// ============================================================
 
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
