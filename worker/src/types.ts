@@ -79,7 +79,8 @@ export type ClientMessage =
   | { type: "challenge_block" }
   | { type: "accept_block" }
   | { type: "lose_influence"; cardIndex: number }
-  | { type: "exchange_select"; cardIndexes: number[] };
+  | { type: "exchange_select"; cardIndexes: number[] }
+  | { type: "rematch" };
 
 // ============================================================
 // WebSocket Messages — Server → Client

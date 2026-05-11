@@ -124,6 +124,7 @@ class GameStore {
   acceptBlock() { this.send({ type: "accept_block" }); }
   loseInfluence(cardIndex: number) { this.send({ type: "lose_influence", cardIndex }); }
   exchangeSelect(cardIndexes: number[]) { this.send({ type: "exchange_select", cardIndexes }); }
+  rematch() { this.send({ type: "rematch" }); }
 
   // ----------------------------------------------------------
   // Derived helpers

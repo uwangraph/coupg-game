@@ -18,6 +18,7 @@ import {
   handleLoseInfluence,
   handlePass,
   isAlive,
+  resetGame,
   startGame,
 } from "./game";
 
@@ -203,6 +204,9 @@ export class GameRoom implements DurableObject {
         break;
       case "exchange_select":
         this.gameState = handleExchangeSelect(this.gameState, playerId, msg.cardIndexes);
+        break;
+      case "rematch":
+        this.gameState = resetGame(this.gameState);
         break;
     }
 

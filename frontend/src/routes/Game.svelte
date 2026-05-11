@@ -321,6 +321,22 @@
         >
           Konfirmasi Pilihan
         </button>
+    </div>
+    {/if}
+
+    {#if phase === "game_over"}
+      <div class="card reaction-box" style="border-color: var(--gold); text-align: center;">
+        <div class="section-label">Permainan Selesai</div>
+        <h2 style="color: var(--gold); margin: 10px 0;">🏆 {gs.players.find(p => p.id === gs.winner)?.name} Menang!</h2>
+        <p style="color: var(--text2); margin-bottom: 20px;">Selamat kepada pemenang!</p>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-gold" style="flex: 1;" onclick={() => game.rematch()}>
+            🔄 Main Lagi (Rematch)
+          </button>
+          <button class="btn" style="flex: 1;" onclick={() => game.disconnect()}>
+            Keluar
+          </button>
+        </div>
       </div>
     {/if}
 

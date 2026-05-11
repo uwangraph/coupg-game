@@ -144,6 +144,24 @@ export function startGame(state: GameState): GameState {
   return state;
 }
 
+export function resetGame(state: GameState): GameState {
+  if (state.phase !== "game_over") throw new Error("Game belum selesai");
+
+  state.phase = "lobby";
+  state.winner = null;
+  state.pendingAction = null;
+  state.loseInfluenceTarget = null;
+  state.exchangeCards = null;
+  state.log = ["🔄 Rematch dimulai!"];
+  
+  for (const p of state.players) {
+    p.coins = 0;
+    p.cards = [];
+  }
+  
+  return state;
+}
+
 // ============================================================
 // Handle player action (first move of a turn)
 // ============================================================
@@ -214,7 +232,11 @@ export function handleAction(
     `▶ ${actor.name} menggunakan ${actionNames[action]}${targetName ? ` pada ${targetName}` : ""}`
   );
 
-  state.phase = "challenge"; // others can challenge or pass
+  if (action === "foreign_aid") {
+    state.phase = "block";
+  } else {
+    state.phase = "challenge"; // others can challenge or pass
+  }
   return state;
 }
 
@@ -387,12 +409,13 @@ export function handleLoseInfluence(
       state.pendingAction = null;
       advanceTurn(state);
     } else if (pending.claimedCharacter && !pending.blocker) {
-      // Actor lost the challenge → action cancelled
-      if (state.players.find((p) => p.id === pending.actorId)?.cards.find(c => c.revealed && !pending.claimedCharacter)) {
+      // Challenge on the actor's claim
+      if (state.loseInfluenceTarget === null && playerId === pending.actorId) {
+        // Actor lost the challenge (they lied) → action cancelled
         state.pendingAction = null;
         advanceTurn(state);
       } else {
-        // challenger lost → resolve action
+        // Challenger lost → resolve the original action
         resolveAction(state, pending);
       }
     } else {
