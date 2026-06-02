@@ -4,6 +4,7 @@
   const gs = $derived(game.gameState);
   const players = $derived(gs?.players ?? []);
   const isHost = $derived(players[0]?.isMe ?? false);
+  const isCreator = $derived(gs?.isCreator ?? false);
   const canStart = $derived(isHost && players.length >= 2);
 
   function copyCode() {
@@ -15,7 +16,10 @@
   <div class="header">
     <div>
       <div class="label">Kode Room</div>
-      <div class="code" onclick={copyCode} title="Klik untuk salin">{gs?.roomCode ?? "…"} 📋</div>
+      <div class="code" onclick={copyCode} title="Klik untuk salin">
+        {gs?.roomCode ?? "…"} 📋
+        {#if gs?.isPrivate}<span class="badge badge-purple" style="margin-left:8px;">Private</span>{/if}
+      </div>
     </div>
     <span class="badge badge-green">
       <span class="dot-live"></span>
@@ -34,6 +38,7 @@
           {p.name}
           {#if i === 0}<span class="host-tag">Host</span>{/if}
           {#if p.isMe}<span class="you-tag">Kamu</span>{/if}
+          {#if p.isCreator}<span class="creator-tag">Pembuat</span>{/if}
         </div>
         <div class="dot" class:online={p.connected}></div>
       </div>
@@ -48,7 +53,7 @@
   </div>
 
   <div class="hint">
-    Bagikan kode room ke teman-temanmu. Game bisa dimulai dengan minimal 2 pemain.
+    Bagikan kode room ke teman-temanmu. Game bisa dimulai dengan minimal 2 pemain. Room akan hilang setelah 1 bulan.
   </div>
 
   {#if isHost}
@@ -59,9 +64,20 @@
     <div class="waiting-text">Menunggu host memulai game...</div>
   {/if}
 
-  <button class="btn full" style="margin-top:8px;" onclick={() => game.disconnect()}>
-    Keluar
-  </button>
+  <div style="display: flex; gap:8px; margin-top:8px;">
+    <button class="btn full" onclick={() => game.disconnect()}>
+      Keluar
+    </button>
+    {#if isCreator}
+      <button class="btn btn-danger full" onclick={() => {
+        if (confirm("Apakah kamu yakin ingin menghapus room ini?")) {
+          game.deleteRoom();
+        }
+      }}>
+        🗑️ Hapus Room
+      </button>
+    {/if}
+  </div>
 </div>
 
 <script context="module" lang="ts">
@@ -86,9 +102,10 @@
   .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
   .empty-av { background: var(--bg3); color: var(--text3); }
   .player-name { flex: 1; font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
-  .host-tag, .you-tag { font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 500; }
+  .host-tag, .you-tag, .creator-tag { font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 500; }
   .host-tag { background: var(--gold-bg); color: var(--gold); }
   .you-tag { background: var(--blue-bg); color: var(--blue); }
+  .creator-tag { background: var(--gold-bg); color: var(--gold); }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); }
   .dot.online { background: var(--green); }
   .hint { font-size: 13px; color: var(--text3); text-align: center; margin: 1rem 0; }

@@ -3,11 +3,26 @@
 
   let name = $state("");
   let code = $state("");
-  let tab = $state<"create" | "join">("create");
+  let customCode = $state("");
+  let password = $state("");
+  let joinPassword = $state("");
+  let tab = $state<"createPublic" | "createPrivate" | "join">("createPublic");
   let loading = $state(false);
   let localError = $state("");
 
-  async function createRoom() {
+  // Baca room code dari URL pathname saat component mount
+  $effect(() => {
+    const pathParts = window.location.pathname.split("/").filter(Boolean);
+    if (pathParts.length > 0) {
+      const potentialCode = pathParts[pathParts.length - 1];
+      if (potentialCode && potentialCode.length >= 4) {
+        code = potentialCode.toUpperCase();
+        tab = "join";
+      }
+    }
+  });
+
+  async function createPublicRoom() {
     if (!name.trim()) { localError = "Masukkan nama kamu"; return; }
     loading = true;
     localError = "";
@@ -28,11 +43,37 @@
     }
   }
 
+  async function createPrivateRoom() {
+    if (!name.trim()) { localError = "Masukkan nama kamu"; return; }
+    if (!password.trim()) { localError = "Masukkan password untuk room private"; return; }
+    loading = true;
+    localError = "";
+    try {
+      const isProd = !location.host.includes("localhost");
+      const apiBase = isProd ? "https://coup-game-worker.uwangraph.workers.dev" : "";
+      const reqBody: any = { isPrivate: true, password };
+      if (customCode.trim()) {
+        reqBody.code = customCode.trim();
+      }
+      const res = await fetch(`${apiBase}/rooms`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reqBody),
+      });
+      const data = await res.json();
+      game.connect(data.code, name.trim(), password);
+    } catch {
+      localError = "Gagal membuat room";
+    } finally {
+      loading = false;
+    }
+  }
+
   function joinRoom() {
     if (!name.trim()) { localError = "Masukkan nama kamu"; return; }
     if (!code.trim() || code.trim().length < 4) { localError = "Masukkan kode room (4 karakter)"; return; }
     localError = "";
-    game.connect(code.trim(), name.trim());
+    game.connect(code.trim(), name.trim(), joinPassword);
   }
 </script>
 
@@ -40,17 +81,34 @@
   <div class="hero">
     <div class="crown">👑</div>
     <h1>Coup Online</h1>
-    <p class="sub">Game tipu daya &amp; bluff multiplayer — 2 hingga 6 pemain</p>
+    <p class="sub">Game tipu daya & bluff multiplayer — 2 hingga 6 pemain</p>
   </div>
 
   <div class="card box">
     <div class="tabs">
-      <button class="tab" class:active={tab === "create"} onclick={() => tab = "create"}>Buat Room</button>
+      <button class="tab" class:active={tab === "createPublic"} onclick={() => tab = "createPublic"}>Buat Room Umum</button>
+      <button class="tab" class:active={tab === "createPrivate"} onclick={() => tab = "createPrivate"}>Buat Room Private</button>
       <button class="tab" class:active={tab === "join"} onclick={() => tab = "join"}>Gabung Room</button>
     </div>
 
     <label class="field-label">Nama kamu</label>
     <input class="input" placeholder="Nama pemain..." bind:value={name} maxlength={20} />
+
+    {#if tab === "createPrivate"}
+      <label class="field-label" style="margin-top:12px;">Kode Room Custom (opsional)</label>
+      <input
+        class="input"
+        placeholder="Misal: MAINBERSAMA, UJIAN"
+        bind:value={customCode}
+        maxlength={20}
+        style="text-transform:uppercase;letter-spacing:0.08em;"
+      />
+    {/if}
+
+    {#if tab === "createPrivate"}
+      <label class="field-label" style="margin-top:12px;">Password Room</label>
+      <input class="input" type="password" placeholder="Password untuk room private..." bind:value={password} maxlength={50} />
+    {/if}
 
     {#if tab === "join"}
       <label class="field-label" style="margin-top:12px;">Kode room</label>
@@ -58,9 +116,11 @@
         class="input"
         placeholder="4 huruf kode room..."
         bind:value={code}
-        maxlength={6}
+        maxlength={20}
         style="text-transform:uppercase;letter-spacing:0.12em;font-size:18px;"
       />
+      <label class="field-label" style="margin-top:12px;">Password (jika room private)</label>
+      <input class="input" type="password" placeholder="Password room..." bind:value={joinPassword} maxlength={50} />
     {/if}
 
     {#if localError}
@@ -70,10 +130,16 @@
     <button
       class="btn btn-primary full"
       style="margin-top:16px;"
-      onclick={tab === "create" ? createRoom : joinRoom}
+      onclick={
+        tab === "createPublic"
+          ? createPublicRoom
+          : tab === "createPrivate"
+          ? createPrivateRoom
+          : joinRoom
+      }
       disabled={loading}
     >
-      {loading ? "Membuat..." : tab === "create" ? "✦ Buat Room" : "→ Gabung"}
+      {loading ? "Membuat..." : tab === "join" ? "→ Gabung" : "✦ Buat Room"}
     </button>
   </div>
 

@@ -13,6 +13,7 @@ class GameStore {
   error = $state<string | null>(null);
   roomCode = $state<string | null>(null);
   myName = $state<string>("");
+  password = $state<string>("");
 
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -22,10 +23,11 @@ class GameStore {
   // Connect / disconnect
   // ----------------------------------------------------------
 
-  connect(code: string, name: string) {
+  connect(code: string, name: string, password: string = "") {
     this.disconnect();
     this.roomCode = code.toUpperCase();
     this.myName = name;
+    this.password = password;
     this.reconnectAttempts = 0;
     this._openSocket();
   }
@@ -43,9 +45,10 @@ class GameStore {
     const baseUrl = isProd 
       ? "coup-game-worker.uwangraph.workers.dev" 
       : location.host;
-    const proto = isProd ? "wss" : (location.protocol === "https:" ? "wss" : "ws");
+    const proto = isProd ? "wss" : (location.protocol === "https" ? "wss" : "ws");
     const nameParam = encodeURIComponent(this.myName);
-    const url = `${proto}://${baseUrl}/rooms/${this.roomCode}/ws?name=${nameParam}`;
+    const passwordParam = this.password ? `&password=${encodeURIComponent(this.password)}` : "";
+    const url = `${proto}://${baseUrl}/rooms/${this.roomCode}/ws?name=${nameParam}${passwordParam}`;
 
     this.status = "connecting";
     this.error = null;
@@ -125,6 +128,7 @@ class GameStore {
   loseInfluence(cardIndex: number) { this.send({ type: "lose_influence", cardIndex }); }
   exchangeSelect(cardIndexes: number[]) { this.send({ type: "exchange_select", cardIndexes }); }
   rematch() { this.send({ type: "rematch" }); }
+  deleteRoom() { this.send({ type: "delete_room" }); }
 
   // ----------------------------------------------------------
   // Derived helpers
