@@ -86,7 +86,8 @@ export type ClientMessage =
   | { type: "lose_influence"; cardIndex: number }
   | { type: "exchange_select"; cardIndexes: number[] }
   | { type: "rematch" }
-  | { type: "delete_room" };
+  | { type: "delete_room" }
+  | { type: "kick"; targetId: string };
 
 // ============================================================
 // WebSocket Messages — Server → Client

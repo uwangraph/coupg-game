@@ -251,6 +251,29 @@ export class GameRoom implements DurableObject {
           return;
         }
         break;
+      case "kick":
+        // Only creator can kick
+        if (this.gameState.creatorId !== playerId) {
+          this.send(ws, { type: "error", message: "Hanya pembuat room yang bisa kick" });
+          return;
+        }
+        // Cannot kick yourself
+        if (msg.targetId === playerId) {
+          this.send(ws, { type: "error", message: "Tidak bisa kick dirimu sendiri" });
+          return;
+        }
+        // Find target socket and close it with reason "kicked"
+        const allSockets = this.state.getWebSockets();
+        for (const sock of allSockets) {
+          const tags = this.state.getTags(sock);
+          const sockPlayerId = tags[0];
+          if (sockPlayerId === msg.targetId) {
+            sock.close(4002, "kicked");
+          }
+        }
+        // Remove player from gameState
+        this.gameState.players = this.gameState.players.filter(p => p.id !== msg.targetId);
+        break;
     }
 
     await this.saveAndBroadcast();

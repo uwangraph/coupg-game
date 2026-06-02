@@ -81,6 +81,10 @@ class GameStore {
         // Room dihapus oleh pembuat, keluar dan tidak reconnect
         this.disconnect();
         window.location.href = "/";
+      } else if (event.code === 4002 && event.reason === "kicked") {
+        // Kamu di kick oleh pembuat, keluar dan tidak reconnect
+        this.disconnect();
+        window.location.href = "/";
       } else if (this.status !== "disconnected") {
         this._scheduleReconnect();
       }
@@ -133,6 +137,7 @@ class GameStore {
   exchangeSelect(cardIndexes: number[]) { this.send({ type: "exchange_select", cardIndexes }); }
   rematch() { this.send({ type: "rematch" }); }
   deleteRoom() { this.send({ type: "delete_room" }); }
+  kick(targetId: string) { this.send({ type: "kick", targetId }); }
 
   // ----------------------------------------------------------
   // Derived helpers

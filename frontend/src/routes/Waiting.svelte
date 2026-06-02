@@ -41,6 +41,15 @@
           {#if p.isCreator}<span class="creator-tag">Pembuat</span>{/if}
         </div>
         <div class="dot" class:online={p.connected}></div>
+        {#if isCreator && !p.isMe}
+          <button class="kick-btn" onclick={() => {
+            if (confirm(`Kamu yakin ingin kick ${p.name}?`)) {
+              game.kick(p.id);
+            }
+          }}>
+            👋
+          </button>
+        {/if}
       </div>
     {/each}
 
@@ -106,6 +115,17 @@
   .host-tag { background: var(--gold-bg); color: var(--gold); }
   .you-tag { background: var(--blue-bg); color: var(--blue); }
   .creator-tag { background: var(--gold-bg); color: var(--gold); }
+  .kick-btn { 
+    background: var(--red-bg); 
+    color: var(--red); 
+    border: 1px solid var(--red); 
+    border-radius: 6px; 
+    padding: 4px 8px; 
+    font-size: 12px; 
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .kick-btn:hover { opacity: 0.8; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); }
   .dot.online { background: var(--green); }
   .hint { font-size: 13px; color: var(--text3); text-align: center; margin: 1rem 0; }
