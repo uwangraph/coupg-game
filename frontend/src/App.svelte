@@ -9,12 +9,31 @@
   const inGame = $derived(phase && phase !== "lobby");
   const gameOver = $derived(phase === "game_over");
 
-  // Tutup WebSocket ketika tab ditutup
+  // Auto connect ketika mount jika ada data di localStorage
+  {
+    const saved = localStorage.getItem("coup-room");
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.code && data.name) {
+          game.connect(data.code, data.name, data.password || "");
+        }
+      } catch {
+        localStorage.removeItem("coup-room");
+      }
+    }
+  }
+
+  // Tutup WebSocket ketika tab ditutup (tetap simpan data agar bisa reconnect nanti)
   window.addEventListener("beforeunload", () => {
-    game.disconnect();
+    if (game.ws) {
+      game.ws.close();
+    }
   });
   window.addEventListener("pagehide", () => {
-    game.disconnect();
+    if (game.ws) {
+      game.ws.close();
+    }
   });
 </script>
 

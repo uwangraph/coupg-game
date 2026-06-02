@@ -29,6 +29,12 @@ class GameStore {
     this.myName = name;
     this.password = password;
     this.reconnectAttempts = 0;
+    // Simpan ke localStorage
+    localStorage.setItem("coup-room", JSON.stringify({
+      code: this.roomCode,
+      name: this.myName,
+      password: this.password
+    }));
     this._openSocket();
   }
 
@@ -38,6 +44,8 @@ class GameStore {
     this.ws = null;
     this.status = "disconnected";
     this.gameState = null;
+    // Hapus dari localStorage ketika explicit disconnect
+    localStorage.removeItem("coup-room");
   }
 
   private _openSocket() {
