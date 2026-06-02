@@ -34,9 +34,14 @@
     {/each}
   </div>
 
-  <button class="btn btn-gold full" onclick={() => game.disconnect()}>
-    Kembali ke Lobby
-  </button>
+  <div style="display: flex; gap: 10px;">
+    <button class="btn btn-gold full" onclick={() => game.rematch()}>
+      🔄 Main Lagi (Rematch)
+    </button>
+    <button class="btn full" onclick={() => game.disconnect()}>
+      Kembali ke Lobby
+    </button>
+  </div>
 </div>
 
 <style>
