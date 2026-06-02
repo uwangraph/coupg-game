@@ -76,6 +76,12 @@ class GameStore {
       }
     };
 
+    ws.onerror = () => {
+      this.status = "error";
+      this._scheduleReconnect();
+    };
+
+    // Ketika WebSocket gagal connect (close dengan status tidak normal)
     ws.onclose = (event) => {
       if (event.code === 4001 && event.reason === "room_deleted") {
         // Room dihapus oleh pembuat, keluar dan tidak reconnect
@@ -85,14 +91,13 @@ class GameStore {
         // Kamu di kick oleh pembuat, keluar dan tidak reconnect
         this.disconnect();
         window.location.href = "/";
+      } else if (event.code === 1006 && this.status === "connecting") {
+        // Connection closed abnormally saat connecting — kemungkinan password salah!
+        this.error = "Password salah atau gagal terhubung ke room";
+        this.disconnect();
       } else if (this.status !== "disconnected") {
         this._scheduleReconnect();
       }
-    };
-
-    ws.onerror = () => {
-      this.status = "error";
-      this._scheduleReconnect();
     };
   }
 
