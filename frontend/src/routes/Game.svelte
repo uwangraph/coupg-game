@@ -63,19 +63,27 @@
     steal: ["Captain", "Ambassador"],
   };
 
-  const canBlock = $derived(
-    phase === "block" &&
-    pending &&
-    !me.isMe ||
-    false
-  );
-
   // Am I the actor?
   const imActor = $derived(pending?.actorId === gs.myId);
+  // Am I the blocker?
+  const imBlocker = $derived(pending?.blocker?.playerId === gs.myId);
   // Am I the target?
   const imTarget = $derived(pending?.targetId === gs.myId);
   // Have I already responded?
   const alreadyResponded = $derived(pending?.respondedPlayers.includes(gs.myId) ?? false);
+
+  // Who can react?
+  const canChallenge = $derived(
+    (phase === "challenge" && !imActor) ||
+    (phase === "block_challenge" && !imBlocker)
+  );
+
+  const canBlockAction = $derived(
+    (phase === "challenge" || phase === "block") && (
+      (pending?.type === "foreign_aid" && !imActor) ||
+      ((pending?.type === "steal" || pending?.type === "assassinate") && imTarget)
+    )
+  );
 
   const charColors: Record<Character, string> = {
     Duke: "var(--gold)",
@@ -201,12 +209,12 @@
           </div>
         {:else}
           <div class="action-grid">
-            <button class="action-btn" onclick={() => game.income()}>
+            <button class="action-btn" onclick={() => game.income()} disabled={myCoins >= 10}>
               <span class="a-emoji">💰</span>
               <span class="a-name">Income</span>
               <span class="a-desc">+1 koin</span>
             </button>
-            <button class="action-btn" onclick={() => game.foreignAid()}>
+            <button class="action-btn" onclick={() => game.foreignAid()} disabled={myCoins >= 10}>
               <span class="a-emoji">🏦</span>
               <span class="a-name">Foreign Aid</span>
               <span class="a-desc">+2 koin (bisa diblok)</span>
@@ -244,14 +252,14 @@
       </div>
     {/if}
 
-    <!-- === CHALLENGE PHASE === -->
-    {#if (phase === "challenge" || phase === "block_challenge") && pending && !imActor && !alreadyResponded}
+    <!-- === COMBINED RESPONSE PHASE === -->
+    {#if (canChallenge || canBlockAction) && pending && !alreadyResponded}
       <div class="card reaction-box">
         <div class="section-label">{phase === "block_challenge" ? "Blok sedang ditantang" : "Respon Aksi"}</div>
         {#if phase === "block_challenge" && pending.blocker}
+          {@const blockerName = gs.players.find(p => p.id === pending.blocker!.playerId)?.name}
           <p class="react-desc">
-            <b>{gs.players.find(p => p.id === pending.blocker!.playerId)?.name}</b>
-            memblok dengan klaim <b>{pending.blocker.claimedCharacter}</b>.
+            <b>{blockerName}</b> memblok dengan klaim <b>{pending.blocker.claimedCharacter}</b>.
             Apakah kamu percaya?
           </p>
           <div class="react-btns">
@@ -259,40 +267,27 @@
             <button class="btn btn-danger" onclick={() => game.challengeBlock()}>⚡ Tantang Blok!</button>
           </div>
         {:else}
+          {@const actorName = gs.players.find(p => p.id === pending.actorId)?.name}
           <p class="react-desc">
-            <b>{gs.players.find(p => p.id === pending.actorId)?.name}</b>
-            menggunakan
+            <b>{actorName}</b> menggunakan
             <b>{pending.claimedCharacter ?? pending.type}</b>
-            {pending.targetId === gs.myId ? "(kamu jadi target!)" : ""}.
-            Apakah kamu percaya?
+            {imTarget ? "(kamu jadi target!)" : ""}.
+            Apa yang ingin kamu lakukan?
           </p>
-          <div class="react-btns">
-            <button class="btn" onclick={() => game.pass()}>✓ Percaya</button>
-            {#if pending.claimedCharacter}
+          <div class="react-btns" style="flex-wrap:wrap; row-gap:8px;">
+            <button class="btn" onclick={() => game.pass()}>✓ Percaya / Biarkan</button>
+            {#if canChallenge && pending.claimedCharacter}
               <button class="btn btn-danger" onclick={() => game.challenge()}>⚡ Tantang!</button>
+            {/if}
+            {#if canBlockAction}
+              {#each (blockOptions[pending.type] ?? []) as ch}
+                <button class="btn btn-primary" onclick={() => game.block(ch)}>
+                  🛡️ Blok dengan {ch}
+                </button>
+              {/each}
             {/if}
           </div>
         {/if}
-      </div>
-    {/if}
-
-    <!-- === BLOCK PHASE === -->
-    {#if phase === "block" && pending && !imActor && !alreadyResponded}
-      <div class="card reaction-box">
-        <div class="section-label">Blok?</div>
-        <p class="react-desc">
-          <b>{gs.players.find(p => p.id === pending.actorId)?.name}</b>
-          menggunakan <b>{pending.type}</b>.
-          Apakah kamu ingin memblok?
-        </p>
-        <div class="react-btns" style="flex-wrap:wrap;">
-          <button class="btn" onclick={() => game.pass()}>Lewati</button>
-          {#each (blockOptions[pending.type] ?? []) as ch}
-            <button class="btn btn-primary" onclick={() => game.block(ch)}>
-              🛡️ Blok dengan {ch}
-            </button>
-          {/each}
-        </div>
       </div>
     {/if}
 
@@ -341,11 +336,12 @@
     {/if}
 
     <!-- Waiting indicator -->
-    {#if !isMyTurn && phase === "playing"}
+    {#if phase === "playing" && !isMyTurn}
       <div class="waiting">⏳ Menunggu {currentPlayer?.name ?? "…"} bermain…</div>
-    {/if}
-    {#if isMyTurn && (phase === "challenge" || phase === "block" || phase === "block_challenge")}
-      <div class="waiting">⏳ Menunggu respons pemain lain…</div>
+    {:else if (phase === "challenge" || phase === "block" || phase === "block_challenge")}
+      {#if alreadyResponded || imBlocker || (imActor && phase !== "block_challenge")}
+        <div class="waiting">⏳ Menunggu pemain lain merespon…</div>
+      {/if}
     {/if}
   </main>
 </div>
