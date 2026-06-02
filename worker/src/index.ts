@@ -241,10 +241,10 @@ export class GameRoom implements DurableObject {
         // Only creator can delete the room
         if (this.gameState.creatorId === playerId) {
           this.gameState.isDeleted = true;
-          // Close all WebSocket connections
+          // Close all WebSocket connections with custom reason "room_deleted"
           const allSockets = this.state.getWebSockets();
           for (const ws of allSockets) {
-            ws.close(1000, "Room has been deleted by the creator");
+            ws.close(4001, "room_deleted");
           }
         } else {
           this.send(ws, { type: "error", message: "Hanya pembuat room yang bisa menghapusnya" });

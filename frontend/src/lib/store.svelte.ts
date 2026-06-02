@@ -76,8 +76,12 @@ class GameStore {
       }
     };
 
-    ws.onclose = () => {
-      if (this.status !== "disconnected") {
+    ws.onclose = (event) => {
+      if (event.code === 4001 && event.reason === "room_deleted") {
+        // Room dihapus oleh pembuat, keluar dan tidak reconnect
+        this.disconnect();
+        window.location.href = "/";
+      } else if (this.status !== "disconnected") {
         this._scheduleReconnect();
       }
     };
