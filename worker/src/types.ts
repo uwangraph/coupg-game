@@ -59,10 +59,15 @@ export interface GameState {
   currentPlayerIndex: number;
   pendingAction: PendingAction | null;
   loseInfluenceTarget: string | null; // player who must lose a card
-  exchangeCards: Character[] | null;  // temp cards for exchange
+  exchangeCards: Character[] | null;
   winner: string | null;
   log: string[];
-  createdAt: number;
+  createdAt: number; // when the game was created (timestamp ms)
+  roomCreatedAt: number; // when the room was created (timestamp ms)
+  creatorId: string | null; // id of the room creator
+  isDeleted: boolean; // whether the room is deleted
+  isPrivate: boolean; // whether room is private
+  password: string | null; // password if room is private
 }
 
 // ============================================================
@@ -80,7 +85,8 @@ export type ClientMessage =
   | { type: "accept_block" }
   | { type: "lose_influence"; cardIndex: number }
   | { type: "exchange_select"; cardIndexes: number[] }
-  | { type: "rematch" };
+  | { type: "rematch" }
+  | { type: "delete_room" };
 
 // ============================================================
 // WebSocket Messages — Server → Client
@@ -105,6 +111,8 @@ export interface GameStateView {
   myCoins: number;
   winner: string | null;
   log: string[];
+  isCreator: boolean;
+  isPrivate: boolean;
 }
 
 export interface PlayerView {
@@ -115,4 +123,5 @@ export interface PlayerView {
   revealedCards: Character[];    // cards that have been flipped face-up
   connected: boolean;
   isMe: boolean;
+  isCreator: boolean;
 }

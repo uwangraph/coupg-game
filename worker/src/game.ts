@@ -58,7 +58,11 @@ function shuffle<T>(arr: T[]): T[] {
 // Initial state
 // ============================================================
 
-export function createInitialState(roomCode: string): GameState {
+export function createInitialState(
+  roomCode: string,
+  isPrivate: boolean = false,
+  password: string | null = null
+): GameState {
   return {
     roomCode,
     phase: "lobby",
@@ -71,6 +75,11 @@ export function createInitialState(roomCode: string): GameState {
     winner: null,
     log: [],
     createdAt: Date.now(),
+    roomCreatedAt: Date.now(),
+    creatorId: null,
+    isDeleted: false,
+    isPrivate,
+    password,
   };
 }
 

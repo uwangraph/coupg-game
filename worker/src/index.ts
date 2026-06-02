@@ -51,19 +51,30 @@ export class GameRoom implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
     if (url.pathname === "/initialize") {
-      try {
-        if (!this.gameState) {
+        try {
           const code = url.searchParams.get("code") || this.getRoomCode();
-          this.gameState = createInitialState(code);
-          await this.state.storage.put("gameState", this.gameState);
+          const isPrivate = url.searchParams.get("isPrivate") === "true";
+          const password = url.searchParams.get("password") || null;
+          if (!this.gameState) {
+            this.gameState = createInitialState(code, isPrivate, password);
+            await this.state.storage.put("gameState", this.gameState);
+          } else {
+            // Check if room is expired or deleted
+            const now = Date.now();
+            if (this.gameState.isDeleted || (now - this.gameState.roomCreatedAt) > ONE_MONTH_MS) {
+              // Reinitialize the room
+              this.gameState = createInitialState(code, isPrivate, password);
+              await this.state.storage.put("gameState", this.gameState);
+            }
+          }
+          return new Response("Initialized");
+        } catch (err: any) {
+          return new Response("Error: " + err.message, { status: 500 });
         }
-        return new Response("Initialized");
-      } catch (err: any) {
-        return new Response("Error: " + err.message, { status: 500 });
       }
-    }
 
     if (url.pathname === "/ws") {
       const upgradeHeader = request.headers.get("Upgrade");
@@ -72,8 +83,20 @@ export class GameRoom implements DurableObject {
       }
 
       const name = url.searchParams.get("name");
+      const password = url.searchParams.get("password") || null;
       if (!name || !this.gameState) {
         return new Response("Nama atau Room tidak valid", { status: 400 });
+      }
+
+      // Check if room is expired or deleted
+      const now = Date.now();
+      if (this.gameState.isDeleted || (now - this.gameState.roomCreatedAt) > ONE_MONTH_MS) {
+        return new Response("Room tidak ditemukan atau sudah kadaluarsa", { status: 404 });
+      }
+
+      // Check password for private rooms
+      if (this.gameState.isPrivate && this.gameState.password && this.gameState.password !== password) {
+        return new Response("Password salah", { status: 401 });
       }
 
       let playerId: string;
@@ -84,6 +107,7 @@ export class GameRoom implements DurableObject {
         playerId = player.id;
         player.connected = true;
       } else {
+        // No disconnected player found, create new one
         if (this.gameState.phase !== "lobby") {
           return new Response("Game sudah berjalan", { status: 403 });
         }
@@ -91,6 +115,10 @@ export class GameRoom implements DurableObject {
           return new Response("Room penuh", { status: 403 });
         }
         playerId = crypto.randomUUID();
+        // If first player, set as creator
+        if (this.gameState.players.length === 0) {
+          this.gameState.creatorId = playerId;
+        }
         this.gameState.players.push({
           id: playerId,
           name: name.slice(0, 20),
@@ -209,6 +237,20 @@ export class GameRoom implements DurableObject {
       case "rematch":
         this.gameState = resetGame(this.gameState);
         break;
+      case "delete_room":
+        // Only creator can delete the room
+        if (this.gameState.creatorId === playerId) {
+          this.gameState.isDeleted = true;
+          // Close all WebSocket connections
+          const allSockets = this.state.getWebSockets();
+          for (const ws of allSockets) {
+            ws.close(1000, "Room has been deleted by the creator");
+          }
+        } else {
+          this.send(ws, { type: "error", message: "Hanya pembuat room yang bisa menghapusnya" });
+          return;
+        }
+        break;
     }
 
     await this.saveAndBroadcast();
@@ -248,6 +290,7 @@ export class GameRoom implements DurableObject {
       revealedCards: p.cards.filter((c) => c.revealed).map((c) => c.character),
       connected: p.connected,
       isMe: p.id === playerId,
+      isCreator: p.id === this.gameState.creatorId,
     }));
 
     return {
@@ -267,6 +310,9 @@ export class GameRoom implements DurableObject {
       myCoins: me ? me.coins : 0,
       winner: this.gameState.winner,
       log: this.gameState.log,
+      // Add if current player is creator
+      isCreator: playerId === this.gameState.creatorId,
+      isPrivate: this.gameState.isPrivate,
     };
   }
 }
@@ -286,16 +332,20 @@ export default {
 
       if (url.pathname === "/rooms" && request.method === "POST") {
         let code: string;
+        let isPrivate = false;
+        let password: string | null = null;
         try {
-          const body = await request.json() as { code?: string };
+          const body = await request.json() as { code?: string; isPrivate?: boolean; password?: string };
           code = body?.code ? body.code.toUpperCase().slice(0, 6) : generateCode();
+          isPrivate = !!body?.isPrivate;
+          password = isPrivate && body?.password ? body.password : null;
         } catch {
           code = generateCode();
         }
         
         const id = env.GAME_ROOM.idFromName(code);
         const stub = env.GAME_ROOM.get(id);
-        await stub.fetch(new Request(`http://game/initialize?code=${code}`));
+        await stub.fetch(new Request(`http://game/initialize?code=${code}&isPrivate=${isPrivate}&password=${encodeURIComponent(password || "")}`));
 
         return new Response(JSON.stringify({ code }), {
           headers: { "Content-Type": "application/json", ...corsHeaders() },
