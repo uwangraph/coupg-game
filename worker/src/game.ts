@@ -177,21 +177,29 @@ export function handleAction(
   if (currentPlayer(state).id !== actorId) throw new Error("Bukan giliran kamu");
   if (state.phase !== "playing") throw new Error("Tidak dalam fase aksi");
 
+  // Validate target if needed
+  let target: Player | undefined;
+  if (targetId) {
+    if (targetId === actorId) throw new Error("Tidak bisa menargetkan diri sendiri");
+    target = state.players.find((p) => p.id === targetId);
+    if (!target) throw new Error("Target tidak ditemukan");
+    if (!isAlive(target)) throw new Error("Target sudah tidak memiliki influence");
+  }
+
   // Coup — instant, no challenge possible
   if (action === "coup") {
     if (actor.coins < 7) throw new Error("Butuh 7 koin untuk coup");
-    if (!targetId) throw new Error("Pilih target");
+    if (!target) throw new Error("Pilih target");
     actor.coins -= 7;
-    const target = state.players.find((p) => p.id === targetId)!;
     addLog(state, `💥 ${actor.name} melakukan Coup pada ${target.name}`);
-    state.loseInfluenceTarget = targetId;
+    state.loseInfluenceTarget = targetId!;
     state.pendingAction = null;
     state.phase = "lose_influence";
     return state;
   }
 
   // Forced coup if 10+ coins
-  if (actor.coins >= 10 && action !== "coup") {
+  if (actor.coins >= 10) {
     throw new Error("Wajib melakukan Coup karena kamu memiliki 10+ koin");
   }
 
@@ -201,6 +209,17 @@ export function handleAction(
     addLog(state, `💰 ${actor.name} mengambil Income (+1 koin)`);
     advanceTurn(state);
     return state;
+  }
+
+  // Action-specific validations
+  if (action === "assassinate") {
+    if (actor.coins < 3) throw new Error("Butuh 3 koin untuk assassinate");
+    if (!target) throw new Error("Pilih target");
+    actor.coins -= 3; // Pay upfront
+  }
+
+  if (action === "steal") {
+    if (!target) throw new Error("Pilih target");
   }
 
   // All other actions go to pending (challengeable / blockable)
@@ -232,11 +251,8 @@ export function handleAction(
     `▶ ${actor.name} menggunakan ${actionNames[action]}${targetName ? ` pada ${targetName}` : ""}`
   );
 
-  if (action === "foreign_aid") {
-    state.phase = "block";
-  } else {
-    state.phase = "challenge"; // others can challenge or pass
-  }
+  // For any action that is challengeable or blockable, go to phase where both options are available
+  state.phase = "challenge";
   return state;
 }
 
@@ -315,10 +331,23 @@ export function handlePass(state: GameState, playerId: string): GameState {
     pending.respondedPlayers.push(playerId);
   }
 
-  const actor = state.players.find((p) => p.id === pending.actorId)!;
-  const eligibleResponders = state.players.filter(
-    (p) => p.id !== pending.actorId && isAlive(p)
-  );
+  let eligibleResponders: Player[];
+  if (state.phase === "block_challenge") {
+    // Everyone except the blocker can challenge the block
+    eligibleResponders = state.players.filter(
+      (p) => p.id !== pending.blocker?.playerId && isAlive(p)
+    );
+  } else if (state.phase === "block" && (pending.type === "steal" || pending.type === "assassinate")) {
+    // Only the target can block steal/assassinate
+    eligibleResponders = state.players.filter(
+      (p) => p.id === pending.targetId && isAlive(p)
+    );
+  } else {
+    // For other phases/actions, everyone except the actor responds
+    eligibleResponders = state.players.filter(
+      (p) => p.id !== pending.actorId && isAlive(p)
+    );
+  }
 
   const allPassed = eligibleResponders.every((p) =>
     pending.respondedPlayers.includes(p.id)
@@ -326,22 +355,9 @@ export function handlePass(state: GameState, playerId: string): GameState {
 
   if (!allPassed) return state; // still waiting
 
-  if (state.phase === "block") {
-    // Everyone passed on blocking — action resolves
+  if (state.phase === "block" || state.phase === "challenge") {
+    // Everyone passed — resolve the action
     resolveAction(state, pending);
-    return state;
-  }
-
-  if (state.phase === "challenge") {
-    // No one challenged — move to block phase (if blockable)
-    const blockable = BLOCKABLE_BY[pending.type];
-    if (blockable && blockable.length > 0) {
-      pending.respondedPlayers = [];
-      state.phase = "block";
-      addLog(state, `🛡️ Tidak ada tantangan. Apakah ada yang ingin memblok?`);
-    } else {
-      resolveAction(state, pending);
-    }
     return state;
   }
 
@@ -366,10 +382,21 @@ export function handleBlock(
 ): GameState {
   const pending = state.pendingAction;
   if (!pending) throw new Error("Tidak ada aksi yang bisa diblok");
-  if (state.phase !== "block") throw new Error("Tidak dalam fase blok");
+  if (state.phase !== "challenge" && state.phase !== "block") throw new Error("Tidak dalam fase yang tepat untuk blok");
 
   const blocker = state.players.find((p) => p.id === blockerId)!;
   const actor = state.players.find((p) => p.id === pending.actorId)!;
+
+  // For steal and assassinate, only the target can block
+  if ((pending.type === "steal" || pending.type === "assassinate") && pending.targetId !== blockerId) {
+    throw new Error("Hanya target yang bisa memblok aksi ini");
+  }
+
+  // Validate if the character can block this action
+  const blockable = BLOCKABLE_BY[pending.type];
+  if (!blockable || !blockable.includes(character)) {
+    throw new Error(`${character} tidak bisa memblok ${pending.type}`);
+  }
 
   addLog(state, `🛡️ ${blocker.name} memblok ${actor.name} dengan klaim ${character}`);
   pending.blocker = { playerId: blockerId, claimedCharacter: character };
@@ -399,7 +426,7 @@ export function handleLoseInfluence(
 
   state.loseInfluenceTarget = null;
   checkWinner(state);
-  if (state.phase === "game_over") return state;
+  if ((state.phase as string) === "game_over") return state;
 
   // Decide what happens next
   const pending = state.pendingAction;
@@ -415,7 +442,7 @@ export function handleLoseInfluence(
         state.pendingAction = null;
         advanceTurn(state);
       } else {
-        // Challenger lost → resolve the original action
+        // Challenger lost → just resolve the action (no separate block phase)
         resolveAction(state, pending);
       }
     } else {
@@ -446,6 +473,9 @@ export function handleExchangeSelect(
   const allCards = state.exchangeCards;
   const alive = actor.cards.filter((c) => !c.revealed).length;
   if (keepIndexes.length !== alive) throw new Error("Pilih kartu yang tepat");
+  if (keepIndexes.some((i) => i < 0 || i >= allCards.length)) {
+    throw new Error("Index kartu tidak valid");
+  }
 
   const kept = keepIndexes.map((i) => allCards[i]);
   const returned = allCards.filter((_, i) => !keepIndexes.includes(i));
@@ -487,7 +517,10 @@ function resolveAction(state: GameState, pending: PendingAction) {
 
     case "assassinate":
       if (!target) break;
-      actor.coins -= 3;
+      if (!isAlive(target)) {
+        addLog(state, `🗡️ Assassinate gagal karena ${target.name} sudah mati`);
+        break;
+      }
       addLog(state, `🗡️ ${actor.name} mengassassinate ${target.name}`);
       state.pendingAction = null;
       state.loseInfluenceTarget = target.id;
@@ -496,6 +529,7 @@ function resolveAction(state: GameState, pending: PendingAction) {
 
     case "steal":
       if (!target) break;
+      if (!isAlive(target)) break;
       const stolen = Math.min(target.coins, 2);
       target.coins -= stolen;
       actor.coins += stolen;
@@ -526,7 +560,7 @@ function advanceTurn(state: GameState) {
   state.pendingAction = null;
   state.currentPlayerIndex = nextAliveIndex(state, state.currentPlayerIndex);
   checkWinner(state);
-  if (state.phase !== "game_over") {
+  if ((state.phase as string) !== "game_over") {
     const cp = currentPlayer(state);
     addLog(state, `🎯 Giliran ${cp.name}`);
   }
