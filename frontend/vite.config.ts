@@ -11,5 +11,15 @@ export default defineConfig({
         ws: true,
       },
     },
+    historyApiFallback: true, // Fallback semua path ke index.html untuk dev server
+  },
+  // Fallback all paths to index.html for SPA
+  preview: {
+    port: 4173,
+    strictPort: true,
+  },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
   },
 });
