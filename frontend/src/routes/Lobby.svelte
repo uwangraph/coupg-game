@@ -1,5 +1,6 @@
 <script lang="ts">
   import { game } from "../lib/store.svelte";
+  import RulesModal from "./RulesModal.svelte";
 
   let name = $state("");
   let code = $state("");
@@ -9,6 +10,7 @@
   let tab = $state<"createPublic" | "createPrivate" | "join">("createPublic");
   let loading = $state(false);
   let localError = $state("");
+  let showRules = $state(false);
 
   // Baca room code dari URL pathname saat component mount
   $effect(() => {
@@ -160,7 +162,12 @@
   </div>
 
   <div class="rules card">
-    <h3>Cara main</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3>Cara main</h3>
+      <button class="btn-rules" onclick={() => showRules = true}>
+        📖 Lihat Rules Lengkap
+      </button>
+    </div>
     <div class="rule-grid">
       <div class="rule"><span class="ico">🎩</span><b>Duke</b> — Tax (+3 koin), blok Foreign Aid</div>
       <div class="rule"><span class="ico">🗡️</span><b>Assassin</b> — Bunuh target (bayar 3), blok Contessa</div>
@@ -172,6 +179,8 @@
     <p class="note">Setiap aksi bisa ditantang! Jika ketahuan berbohong, kamu kehilangan influence.</p>
   </div>
 </div>
+
+<RulesModal isOpen={showRules} onClose={() => showRules = false} />
 
 <style>
   .wrap {
@@ -204,4 +213,18 @@
   .ico { font-size: 16px; flex-shrink: 0; }
   b { color: var(--text); font-weight: 500; }
   .note { font-size: 12px; color: var(--text3); border-top: 1px solid var(--border); padding-top: 10px; }
+  .btn-rules {
+    background: var(--accent);
+    color: var(--accent-bg);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+  .btn-rules:hover {
+    background: var(--accent-hover);
+  }
 </style>
