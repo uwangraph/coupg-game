@@ -1,4 +1,4 @@
-import type { ClientMessage, GameStateView, ServerMessage } from "../../../worker/src/types";
+import type { Character, ClientMessage, GameStateView, ServerMessage } from "../../../worker/src/types";
 
 // ============================================================
 // Reactive WebSocket state — Svelte 5 runes-compatible
@@ -119,7 +119,7 @@ class GameStore {
   assassinate(targetId: string) { this.send({ type: "action", action: "assassinate", targetId }); }
   challenge() { this.send({ type: "challenge" }); }
   pass() { this.send({ type: "pass" }); }
-  block(character: import("../../../worker/src/types").Character) { this.send({ type: "block", character }); }
+  block(character: Character) { this.send({ type: "block", character }); }
   challengeBlock() { this.send({ type: "challenge_block" }); }
   acceptBlock() { this.send({ type: "accept_block" }); }
   loseInfluence(cardIndex: number) { this.send({ type: "lose_influence", cardIndex }); }
