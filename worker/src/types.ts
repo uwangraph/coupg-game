@@ -76,6 +76,7 @@ export interface GameState {
 
 export type ClientMessage =
   | { type: "join"; name: string }
+  | { type: "leave" } // explicit leave (remove from room)
   | { type: "start_game" }
   | { type: "action"; action: ActionType; targetId?: string }
   | { type: "challenge" }

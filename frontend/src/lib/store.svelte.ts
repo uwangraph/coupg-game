@@ -38,6 +38,13 @@ class GameStore {
     this._openSocket();
   }
 
+  leave() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "leave" }));
+    }
+    this.disconnect();
+  }
+
   disconnect() {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.ws?.close();

@@ -328,7 +328,7 @@
           <button class="btn btn-gold" style="flex: 1;" onclick={() => game.rematch()}>
             🔄 Main Lagi (Rematch)
           </button>
-          <button class="btn" style="flex: 1;" onclick={() => game.disconnect()}>
+          <button class="btn" style="flex: 1;" onclick={() => game.leave()}>
             Keluar
           </button>
         </div>
@@ -344,7 +344,7 @@
           <button class="btn btn-gold" style="flex: 1;" onclick={() => game.rematch()}>
             🔄 Main Lagi (Rematch)
           </button>
-          <button class="btn" style="flex: 1;" onclick={() => game.disconnect()}>
+          <button class="btn" style="flex: 1;" onclick={() => game.leave()}>
             Keluar
           </button>
         </div>

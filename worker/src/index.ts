@@ -222,6 +222,15 @@ export class GameRoom implements DurableObject {
     if (!this.gameState) return;
 
     switch (msg.type) {
+      case "leave":
+        // Remove player from the room entirely
+        this.gameState.players = this.gameState.players.filter(p => p.id !== playerId);
+        // Close any of their WebSockets
+        const theirSockets = this.state.getWebSockets(playerId);
+        for (const sock of theirSockets) {
+          sock.close(4003, "left_room");
+        }
+        break;
       case "start_game":
         this.gameState = startGame(this.gameState);
         break;

@@ -74,7 +74,7 @@
   {/if}
 
   <div style="display: flex; gap:8px; margin-top:8px;">
-    <button class="btn full" onclick={() => game.disconnect()}>
+    <button class="btn full" onclick={() => game.leave()}>
       Keluar
     </button>
     {#if isCreator}
