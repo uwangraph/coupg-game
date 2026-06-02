@@ -46,6 +46,16 @@
   async function createPrivateRoom() {
     if (!name.trim()) { localError = "Masukkan nama kamu"; return; }
     if (!password.trim()) { localError = "Masukkan password untuk room private"; return; }
+    if (customCode.trim()) {
+      if (customCode.trim().length < 4) { 
+        localError = "Kode room custom minimal 4 karakter";
+        return;
+      }
+      if (customCode.trim().length > 10) { 
+        localError = "Kode room custom maksimal 10 karakter";
+        return;
+      }
+    }
     loading = true;
     localError = "";
     try {
@@ -95,12 +105,12 @@
     <input class="input" placeholder="Nama pemain..." bind:value={name} maxlength={20} />
 
     {#if tab === "createPrivate"}
-      <label class="field-label" style="margin-top:12px;">Kode Room Custom (opsional)</label>
+      <label class="field-label" style="margin-top: 12px;">Kode Room Custom (opsional, 4-10 karakter)</label>
       <input
         class="input"
-        placeholder="Misal: MAINBERSAMA, UJIAN"
+        placeholder="Misal: MAINBERS, UJIAN"
         bind:value={customCode}
-        maxlength={20}
+        maxlength={10}
         style="text-transform:uppercase;letter-spacing:0.08em;"
       />
     {/if}

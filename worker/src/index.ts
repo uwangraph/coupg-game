@@ -336,7 +336,7 @@ export default {
         let password: string | null = null;
         try {
           const body = await request.json() as { code?: string; isPrivate?: boolean; password?: string };
-          code = body?.code ? body.code.toUpperCase().slice(0, 6) : generateCode();
+          code = body?.code ? body.code.toUpperCase().slice(0, 10) : generateCode();
           isPrivate = !!body?.isPrivate;
           password = isPrivate && body?.password ? body.password : null;
         } catch {
@@ -352,7 +352,7 @@ export default {
         });
       }
 
-      const stateMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,6})\/state$/);
+      const stateMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,10})\/state$/);
       if (stateMatch) {
         const id = env.GAME_ROOM.idFromName(stateMatch[1]);
         const stub = env.GAME_ROOM.get(id);
@@ -362,7 +362,7 @@ export default {
         });
       }
 
-      const wsMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,6})\/ws$/);
+      const wsMatch = url.pathname.match(/^\/rooms\/([A-Z0-9]{4,10})\/ws$/);
       if (wsMatch) {
         const id = env.GAME_ROOM.idFromName(wsMatch[1]);
         const stub = env.GAME_ROOM.get(id);
