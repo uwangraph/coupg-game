@@ -58,19 +58,26 @@ export class GameRoom implements DurableObject {
           const code = url.searchParams.get("code") || this.getRoomCode();
           const isPrivate = url.searchParams.get("isPrivate") === "true";
           const password = url.searchParams.get("password") || null;
+          
           if (!this.gameState) {
             this.gameState = createInitialState(code, isPrivate, password);
             await this.state.storage.put("gameState", this.gameState);
-          } else {
-            // Check if room is expired or deleted
-            const now = Date.now();
-            if (this.gameState.isDeleted || (now - this.gameState.roomCreatedAt) > ONE_MONTH_MS) {
-              // Reinitialize the room
-              this.gameState = createInitialState(code, isPrivate, password);
-              await this.state.storage.put("gameState", this.gameState);
-            }
+            return new Response("Initialized");
           }
-          return new Response("Initialized");
+
+          const now = Date.now();
+          const isExpired = this.gameState.isDeleted || (now - this.gameState.roomCreatedAt) > ONE_MONTH_MS;
+          const isLobbyEmpty = this.gameState.phase === "lobby" && this.gameState.players.length === 0;
+
+          if (isExpired || isLobbyEmpty) {
+            // Boleh re-init
+            this.gameState = createInitialState(code, isPrivate, password);
+            await this.state.storage.put("gameState", this.gameState);
+            return new Response("Initialized");
+          }
+
+          // Jika room sudah aktif (phase bukan lobby atau masih ada player di lobby) → error!
+          return new Response("Room code already in use", { status: 409 });
         } catch (err: any) {
           return new Response("Error: " + err.message, { status: 500 });
         }

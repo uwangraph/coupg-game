@@ -70,10 +70,16 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(reqBody),
       });
+      if (!res.ok) {
+        if (res.status === 409) {
+          throw new Error("Kode room sudah dipakai");
+        }
+        throw new Error("Gagal membuat room");
+      }
       const data = await res.json();
       game.connect(data.code, name.trim(), password);
-    } catch {
-      localError = "Gagal membuat room";
+    } catch (e) {
+      localError = (e as Error).message || "Gagal membuat room";
     } finally {
       loading = false;
     }
