@@ -8,6 +8,14 @@
   const phase = $derived(game.gameState?.phase ?? null);
   const inGame = $derived(phase && phase !== "lobby");
   const gameOver = $derived(phase === "game_over");
+
+  // Tutup WebSocket ketika tab ditutup
+  window.addEventListener("beforeunload", () => {
+    game.disconnect();
+  });
+  window.addEventListener("pagehide", () => {
+    game.disconnect();
+  });
 </script>
 
 <main>

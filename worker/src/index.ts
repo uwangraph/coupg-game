@@ -338,6 +338,21 @@ export class GameRoom implements DurableObject {
       isPrivate: this.gameState.isPrivate,
     };
   }
+
+  async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): Promise<void> {
+    if (!this.gameState) return;
+    const tags = this.state.getTags(ws);
+    const playerId = tags[0];
+    if (!playerId) return;
+    // Skip jika ditutup karena kick atau room deleted (sudah ditangani di message handler)
+    if (reason === "kicked" || reason === "room_deleted") return;
+    // Tandai player sebagai disconnected
+    const player = this.gameState.players.find(p => p.id === playerId);
+    if (player) {
+      player.connected = false;
+      await this.saveAndBroadcast();
+    }
+  }
 }
 
 // ============================================================
