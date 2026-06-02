@@ -100,14 +100,22 @@ export class GameRoom implements DurableObject {
       }
 
       let playerId: string;
-      // Try to find a disconnected player with the same name for reconnection
-      let player = this.gameState.players.find((p) => p.name === name && !p.connected);
+      // Try to find a player with the same name (even if still connected - for refresh case)
+      let player = this.gameState.players.find((p) => p.name === name);
 
       if (player) {
         playerId = player.id;
+        // If player was still connected, close the old socket first
+        const allSockets = this.state.getWebSockets();
+        for (const ws of allSockets) {
+          const tags = this.state.getTags(ws);
+          if (tags[0] === playerId) {
+            ws.close(1000, "New connection from same user");
+          }
+        }
         player.connected = true;
       } else {
-        // No disconnected player found, create new one
+        // No player found, create new one
         if (this.gameState.phase !== "lobby") {
           return new Response("Game sudah berjalan", { status: 403 });
         }
