@@ -76,8 +76,9 @@ export class GameRoom implements DurableObject {
         return new Response("Nama atau Room tidak valid", { status: 400 });
       }
 
-      let player = this.gameState.players.find((p) => p.name === name);
       let playerId: string;
+      // Try to find a disconnected player with the same name for reconnection
+      let player = this.gameState.players.find((p) => p.name === name && !p.connected);
 
       if (player) {
         playerId = player.id;
@@ -286,8 +287,8 @@ export default {
       if (url.pathname === "/rooms" && request.method === "POST") {
         let code: string;
         try {
-          const body = await request.json<{ code?: string }>().catch(() => ({}));
-          code = body.code ? body.code.toUpperCase().slice(0, 6) : generateCode();
+          const body = await request.json() as { code?: string };
+          code = body?.code ? body.code.toUpperCase().slice(0, 6) : generateCode();
         } catch {
           code = generateCode();
         }
