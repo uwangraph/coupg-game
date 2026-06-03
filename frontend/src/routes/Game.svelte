@@ -64,16 +64,12 @@
     steal: ["Captain", "Ambassador"],
   };
 
-  // Am I the actor?
+  // Status pemain untuk reaksi
   const imActor = $derived(pending?.actorId === gs.myId);
-  // Am I the blocker?
   const imBlocker = $derived(pending?.blocker?.playerId === gs.myId);
-  // Am I the target?
   const imTarget = $derived(pending?.targetId === gs.myId);
-  // Have I already responded?
   const alreadyResponded = $derived(pending?.respondedPlayers.includes(gs.myId) ?? false);
 
-  // Who can react?
   const canChallenge = $derived(
     (phase === "challenge" && !imActor) ||
     (phase === "block_challenge" && !imBlocker)
@@ -87,11 +83,11 @@
   );
 
   const charColors: Record<Character, string> = {
-    Duke: "var(--role-duke)",
-    Assassin: "var(--role-assassin)",
-    Captain: "var(--role-captain)",
-    Ambassador: "var(--role-ambassador)",
-    Contessa: "var(--role-contessa)",
+    Duke: "#A855F7",
+    Assassin: "#06B6D4",
+    Captain: "#3B82F6",
+    Ambassador: "#22C55E",
+    Contessa: "#EF4444",
   };
 
   function avatarColor(i: number) {
@@ -104,102 +100,33 @@
 </script>
 
 <div class="layout">
-  <!-- Sidebar: others -->
-  <aside>
-    <div class="aside-header">
-      <div class="room-code-group">
-        <span class="room-label">Room</span>
-        <div class="room-code">{gs.roomCode}</div>
-      </div>
-      <button class="btn-rules-small" onclick={() => game.showRules = true} title="Lihat Aturan">
-        <Icon name="Rules" size={14} class="mr-1" /> Rules
-      </button>
-    </div>
-
-    <div class="others-list">
-      <div class="section-header">
-        <span class="section-label">Pemain Lain</span>
-        <span class="player-count">{others.length}</span>
-      </div>
-      {#each gs.players as p, i}
-        {#if !p.isMe}
-          <div
-            class="other-player"
-            class:current={gs.players[gs.currentPlayerIndex]?.id === p.id}
-            class:dead={p.influenceCount === 0}
-            class:selectable={!!pendingAction && p.influenceCount > 0}
-            class:selected={selectedTarget === p.id}
-            onclick={() => { if (pendingAction && p.influenceCount > 0) selectedTarget = p.id; }}
-          >
-            <div class="av-wrap">
-              <div class="av" style="background: {avatarColor(i)}22; color: {avatarColor(i)}; border: 1px solid {avatarColor(i)}44;">
-                {initials(p.name)}
-              </div>
-              {#if gs.players[gs.currentPlayerIndex]?.id === p.id}
-                <div class="turn-dot"></div>
-              {/if}
-            </div>
-            <div class="pinfo">
-              <div class="pname">
-                {p.name}
-                {#if !p.connected}<span class="disc">off</span>{/if}
-              </div>
-              <div class="pcoins">
-                <Icon name="Coins" size={12} class="mr-1" /> {p.coins}
-              </div>
-            </div>
-            <div class="cards-mini">
-              {#each { length: p.influenceCount } as _}
-                <div class="mini-card alive"></div>
-              {/each}
-              {#each p.revealedCards as ch}
-                <div class="mini-card dead" style="--cc:{charColors[ch]};" title={ch}>
-                  <Icon name={ch} size={10} />
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      {/each}
-    </div>
-
-    <div class="log-box">
-      <div class="section-label">Log Aktivitas</div>
-      <div class="log-entries">
-        {#each gs.log as entry}
-          <div class="log-entry">{entry}</div>
-        {/each}
-      </div>
-    </div>
-  </aside>
-
-  <!-- Main area -->
   <main>
-    <!-- Turn indicator -->
     <div class="status-bar" class:my-turn={isMyTurn}>
-      {#if isMyTurn}
-        <div class="status-content">
-          <span class="pulse-icon blue"></span>
-          <span class="status-text">Sekarang giliranmu!</span>
-        </div>
-      {:else}
-        <div class="status-content">
-          <span class="pulse-icon gray"></span>
-          <span class="status-text">Menunggu <b>{currentPlayer?.name}</b>...</span>
-        </div>
-      {/if}
+      <div class="status-content">
+        <span class="pulse-icon" class:blue={isMyTurn} class:gray={!isMyTurn}></span>
+        <span class="status-text">
+          {#if isMyTurn}
+            Sekarang <b>giliranmu!</b> Pilih opsi aksi di bawah.
+          {:else}
+            Menunggu langkah dari <b>{currentPlayer?.name}</b>...
+          {/if}
+        </span>
+      </div>
       <div class="phase-badge">{phase.replace('_', ' ')}</div>
     </div>
 
-    <!-- My cards -->
     <div class="card my-influence-card">
       <div class="my-header">
         <div class="my-info">
-          <span class="section-label">Pengaruhmu</span>
-          <h2 class="my-coins"><Icon name="Coins" size={28} class="mr-2" /> {myCoins} <small>koin</small></h2>
+          <span class="section-label">Aset Kamu</span>
+          <h2 class="my-coins">
+            <Icon name="Coins" size={22} class="icon-gold" /> {myCoins} <small>Koin</small>
+          </h2>
         </div>
         {#if mustLose}
-          <div class="lose-warning"><Icon name="Alert" size={16} class="mr-2" /> Pilih 1 kartu untuk dibuang!</div>
+          <div class="lose-warning">
+            <Icon name="Alert" size={14} /> Pilih 1 kartu untuk dibuang!
+          </div>
         {/if}
       </div>
       
@@ -213,15 +140,15 @@
           >
             <div class="card-inner">
               <div class="char-icon">
-                <Icon name={c.character} size={48} />
+                <Icon name={c.character} size={36} />
               </div>
               <div class="char-name">{c.character}</div>
               {#if !c.revealed && mustLose}
-                <button class="lose-btn" onclick={() => game.loseInfluence(i)}>Pilih Ini</button>
+                <button class="lose-btn" onclick={() => game.loseInfluence(i)}>Korbankan</button>
               {/if}
               {#if c.revealed}
                 <div class="dead-overlay">
-                  <Icon name="Skull" size={40} class="mb-2" style="color: var(--accent-red);" />
+                  <Icon name="Skull" size={28} class="mb-1" />
                   <span class="dead-text">Terbuka</span>
                 </div>
               {/if}
@@ -231,17 +158,15 @@
       </div>
     </div>
 
-    <!-- === ACTION PHASE === -->
     {#if phase === "playing" && isMyTurn}
       <div class="card action-card">
-        <div class="section-label">Pilih Aksi Strategis</div>
         {#if pendingAction}
           <div class="target-selection">
             <div class="target-header">
               <button class="back-btn" onclick={cancelTarget}>
-                <Icon name="ArrowLeft" size={14} class="mr-1" /> Kembali
+                <Icon name="ArrowLeft" size={14} /> Kembali
               </button>
-              <p>Pilih target <b>{pendingAction}</b>:</p>
+              <span class="section-label">Pilih Target Aksi: {pendingAction}</span>
             </div>
             <div class="target-grid">
               {#each others.filter(p => p.influenceCount > 0) as p}
@@ -251,95 +176,107 @@
                   onclick={() => selectedTarget = p.id}
                 >
                   <span class="t-name">{p.name}</span>
-                  <span class="t-coins"><Icon name="Coins" size={12} class="mr-1" /> {p.coins}</span>
+                  <span class="t-coins"><Icon name="Coins" size={12} /> {p.coins} Koin</span>
                 </button>
               {/each}
             </div>
-            <button class="btn btn-primary full confirm-btn" disabled={!selectedTarget} onclick={confirmTarget}>
-              <Icon name="Target" size={18} class="mr-2" /> Luncurkan Aksi
+            <button class="btn btn-primary confirm-btn" disabled={!selectedTarget} onclick={confirmTarget}>
+              <Icon name="Target" size={16} /> Eksekusi {pendingAction}
             </button>
           </div>
         {:else}
-          <div class="action-grid">
-            <button class="action-btn" onclick={() => game.income()} disabled={myCoins >= 10}>
-              <div class="a-icon"><Icon name="Coins" size={24} /></div>
-              <div class="a-content">
-                <div class="a-title">Income</div>
-                <div class="a-desc">+1 koin</div>
+          <span class="section-label">Pilih Langkah Strategis</span>
+          
+          <div class="action-sections">
+            <div class="action-group">
+              <div class="group-title">Aksi Dasar (Aman)</div>
+              <div class="action-grid basic-grid">
+                <button class="action-btn-smooth" style="--cc: var(--text-dim);" onclick={() => game.income()} disabled={myCoins >= 10}>
+                  <div class="a-icon"><Icon name="Coins" size={18} /></div>
+                  <div class="a-content">
+                    <span class="a-title">Income</span>
+                    <span class="a-desc">+1 Koin</span>
+                  </div>
+                </button>
+                <button class="action-btn-smooth" style="--cc: var(--text-dim);" onclick={() => game.foreignAid()} disabled={myCoins >= 10}>
+                  <div class="a-icon"><Icon name="Globe" size={18} /></div>
+                  <div class="a-content">
+                    <span class="a-title">Foreign Aid</span>
+                    <span class="a-desc">+2 Koin</span>
+                  </div>
+                </button>
+                <button class="action-btn-smooth coup-style" style="--cc: var(--accent-gold);" onclick={() => selectTarget("coup")} disabled={myCoins < 7}>
+                  <div class="a-icon"><Icon name="Coup" size={18} /></div>
+                  <div class="a-content">
+                    <span class="a-title">Coup d'État</span>
+                    <span class="a-desc">Biaya 7 Koin (Pasti)</span>
+                  </div>
+                </button>
               </div>
-            </button>
-            <button class="action-btn" onclick={() => game.foreignAid()} disabled={myCoins >= 10}>
-              <div class="a-icon"><Icon name="Globe" size={24} /></div>
-              <div class="a-content">
-                <div class="a-title">Foreign Aid</div>
-                <div class="a-desc">+2 koin <small>(bisa diblok)</small></div>
+            </div>
+
+            <div class="action-group">
+              <div class="group-title">Aksi Karakter (Bisa Gertak / Bluff)</div>
+              <div class="action-grid character-grid">
+                <button class="action-btn-smooth" style="--cc: {charColors.Duke};" onclick={() => game.tax()} disabled={myCoins >= 10}>
+                  <div class="a-icon" style="color: {charColors.Duke};"><Icon name="Duke" size={18} /></div>
+                  <div class="a-content">
+                    <span class="a-title">Tax <small>(Duke)</small></span>
+                    <span class="a-desc">+3 Koin</span>
+                  </div>
+                </button>
+                <button class="action-btn-smooth" style="--cc: {charColors.Captain};" onclick={() => selectTarget("steal")} disabled={myCoins >= 10}>
+                  <div class="a-icon" style="color: {charColors.Captain};"><Icon name="Captain" size={18} /></div>
+                  <div class="a-content">
+                    <span class="a-title">Steal <small>(Captain)</small></span>
+                    <span class="a-desc">Curi 2 Koin</span>
+                  </div>
+                </button>
+                <button class="action-btn-smooth" style="--cc: {charColors.Ambassador};" onclick={() => game.exchange()} disabled={myCoins >= 10}>
+                  <div class="a-icon" style="color: {charColors.Ambassador};"><Icon name="Ambassador" size={18} /></div>
+                  <div class="a-content">
+                    <span class="a-title">Exchange <small>(Ambassador)</small></span>
+                    <span class="a-desc">Tukar Kartu</span>
+                  </div>
+                </button>
+                <button class="action-btn-smooth" style="--cc: {charColors.Assassin};" onclick={() => selectTarget("assassinate")} disabled={myCoins < 3 || myCoins >= 10}>
+                  <div class="a-icon" style="color: {charColors.Assassin};"><Icon name="Assassin" size={18} /></div>
+                  <div class="a-content">
+                    <span class="a-title">Assassinate <small>(Assassin)</small></span>
+                    <span class="a-desc">Biaya 3 Koin</span>
+                  </div>
+                </button>
               </div>
-            </button>
-            <button class="action-btn gold" onclick={() => game.tax()} disabled={myCoins >= 10}>
-              <div class="a-icon"><Icon name="Duke" size={24} /></div>
-              <div class="a-content">
-                <div class="a-title">Tax (Duke)</div>
-                <div class="a-desc">+3 koin</div>
-              </div>
-            </button>
-            <button class="action-btn blue" onclick={() => selectTarget("steal")} disabled={myCoins >= 10}>
-              <div class="a-icon"><Icon name="Captain" size={24} /></div>
-              <div class="a-content">
-                <div class="a-title">Steal (Captain)</div>
-                <div class="a-desc">Curi 2 koin</div>
-              </div>
-            </button>
-            <button class="action-btn green" onclick={() => game.exchange()} disabled={myCoins >= 10}>
-              <div class="a-icon"><Icon name="Ambassador" size={24} /></div>
-              <div class="a-content">
-                <div class="a-title">Exchange</div>
-                <div class="a-desc">Tukar kartu</div>
-              </div>
-            </button>
-            <button class="action-btn red" onclick={() => selectTarget("assassinate")} disabled={myCoins < 3 || myCoins >= 10}>
-              <div class="a-icon"><Icon name="Assassin" size={24} /></div>
-              <div class="a-content">
-                <div class="a-title">Assassinate</div>
-                <div class="a-desc">Biaya 3 koin</div>
-              </div>
-            </button>
-            <button class="action-btn coup" onclick={() => selectTarget("coup")} disabled={myCoins < 7}>
-              <div class="a-icon"><Icon name="Coup" size={24} /></div>
-              <div class="a-content">
-                <div class="a-title">Coup d'État</div>
-                <div class="a-desc">Biaya 7 koin <small>(Wajib jika ≥10)</small></div>
-              </div>
-            </button>
+            </div>
           </div>
+
           {#if myCoins >= 10}
             <div class="force-coup-banner">
-              <Icon name="Alert" size={16} class="mr-2" /> Kamu wajib melakukan Coup karena memiliki 10+ koin!
+              <Icon name="Alert" size={16} /> Dompet penuh! Kamu wajib Kudeta (Coup).
             </div>
           {/if}
         {/if}
       </div>
     {/if}
 
-    <!-- === REACTION PHASE === -->
     {#if (canChallenge || canBlockAction) && pending && !alreadyResponded}
-      <div class="card reaction-card pulse-blue">
+      <div class="card reaction-card dynamic-glow">
         <div class="reaction-header">
-          <span class="badge badge-blue"><Icon name="Zap" size={12} class="mr-1" /> Reaksi Dibutuhkan</span>
+          <span class="badge-alert"><Icon name="Zap" size={12} /> Respons Dibutuhkan</span>
         </div>
         
         {#if phase === "block_challenge" && pending.blocker}
           {@const blockerName = gs.players.find(p => p.id === pending.blocker!.playerId)?.name}
           <div class="reaction-content">
             <p class="react-msg">
-              <b>{blockerName}</b> memblokir aksimu dengan klaim <b>{pending.blocker.claimedCharacter}</b>.
-              Apakah kamu percaya?
+              <b>{blockerName}</b> memblokir aksimu dengan mengklaim peran <b>{pending.blocker.claimedCharacter}</b>.
             </p>
             <div class="react-actions">
-              <button class="btn full" onclick={() => game.acceptBlock()}>
-                <Icon name="Check" size={16} class="mr-2" /> Biarkan
+              <button class="btn btn-secondary" onclick={() => game.acceptBlock()}>
+                <Icon name="Check" size={16} /> Izinkan
               </button>
-              <button class="btn btn-danger full" onclick={() => game.challengeBlock()}>
-                <Icon name="Zap" size={16} class="mr-2" /> Tantang Blok!
+              <button class="btn btn-danger" onclick={() => game.challengeBlock()}>
+                <Icon name="Zap" size={16} /> Tantang Kebohongan!
               </button>
             </div>
           </div>
@@ -347,27 +284,28 @@
           {@const actorName = gs.players.find(p => p.id === pending.actorId)?.name}
           <div class="reaction-content">
             <p class="react-msg">
-              <b>{actorName}</b> melakukan <b>{pending.claimedCharacter ?? pending.type}</b>
-              {#if imTarget}<span class="target-tag">kepadamu!</span>{/if}
+              <b>{actorName}</b> melakukan aksi <b>{pending.claimedCharacter ?? pending.type}</b>
+              {#if imTarget}<span class="target-tag">Menargetkanmu!</span>{/if}
             </p>
-            <div class="react-actions vertical">
+            <div class="react-actions vertical-stack">
               <div class="primary-reacts">
-                <button class="btn full" onclick={() => game.pass()}>
-                  <Icon name="Check" size={16} class="mr-2" /> Biarkan Saja
+                <button class="btn btn-secondary" onclick={() => game.pass()}>
+                  <Icon name="Check" size={16} /> Biarkan Saja
                 </button>
                 {#if canChallenge && pending.claimedCharacter}
-                  <button class="btn btn-danger full" onclick={() => game.challenge()}>
-                    <Icon name="Zap" size={16} class="mr-2" /> Tantang Bluff!
+                  <button class="btn btn-danger" onclick={() => game.challenge()}>
+                    <Icon name="Zap" size={16} /> Tantang Bluff!
                   </button>
                 {/if}
               </div>
+              
               {#if canBlockAction}
                 <div class="block-options">
-                  <div class="tiny-label">Atau blokir dengan:</div>
+                  <div class="tiny-label">Atau klaim peran tameng untuk blokir:</div>
                   <div class="block-btns">
                     {#each (blockOptions[pending.type] ?? []) as ch}
-                      <button class="btn btn-primary full" onclick={() => game.block(ch)}>
-                        <Icon name="Shield" size={16} class="mr-2" /> {ch}
+                      <button class="btn btn-primary" onclick={() => game.block(ch)}>
+                        <Icon name="Shield" size={16} /> Sebagai {ch}
                       </button>
                     {/each}
                   </div>
@@ -379,10 +317,9 @@
       </div>
     {/if}
 
-    <!-- === EXCHANGE SELECT === -->
     {#if phase === "exchange_select" && gs.loseInfluenceTarget === null}
       <div class="card exchange-card">
-        <div class="section-label">Pilih {aliveCount} kartu untuk disimpan</div>
+        <span class="section-label">Opsi Ambil Alih Deck (Pilih {aliveCount})</span>
         <div class="exchange-grid">
           {#each exchangeCards as ch, i}
             <button
@@ -392,256 +329,486 @@
               onclick={() => toggleExchange(i)}
             >
               <div class="ex-icon">
-                <Icon name={ch} size={32} />
+                <Icon name={ch} size={24} />
               </div>
               <div class="ex-name">{ch}</div>
               {#if exchangeSelected.includes(i)}
                 <div class="ex-check">
-                  <Icon name="Check" size={14} />
+                  <Icon name="Check" size={10} />
                 </div>
               {/if}
             </button>
           {/each}
         </div>
         <button
-          class="btn btn-gold full confirm-ex-btn"
+          class="btn btn-gold confirm-ex-btn"
           disabled={exchangeSelected.length !== aliveCount}
           onclick={confirmExchange}
         >
-          <Icon name="Check" size={18} class="mr-2" /> Konfirmasi Pilihan Kartu
+          <Icon name="Check" size={16} /> Simpan Kartu Terpilih
         </button>
-    </div>
+      </div>
     {/if}
 
-    <!-- Waiting indicator -->
     {#if phase === "playing" && !isMyTurn}
-      <div class="waiting-box">
-        <div class="loader-dots"><span></span><span></span><span></span></div>
-        <p>Menunggu strategi <b>{currentPlayer?.name}</b>...</p>
+      <div class="waiting-card-subtle">
+        <div class="waiting-box">
+          <div class="loader-dots"><span></span><span></span><span></span></div>
+          <p>Menunggu keputusan taktik dari <b>{currentPlayer?.name}</b>...</p>
+        </div>
       </div>
     {:else if (phase === "challenge" || phase === "block" || phase === "block_challenge")}
       {#if alreadyResponded || imBlocker || (imActor && phase !== "block_challenge")}
-        <div class="waiting-box">
-          <div class="loader-dots"><span></span><span></span><span></span></div>
-          <p>Menunggu respon pemain lain...</p>
+        <div class="waiting-card-subtle">
+          <div class="waiting-box">
+            <div class="loader-dots"><span></span><span></span><span></span></div>
+            <p>Menunggu tanggapan meja dari pemain lain...</p>
+          </div>
         </div>
       {/if}
     {/if}
   </main>
+
+  <aside>
+    <div class="aside-header">
+      <div class="room-code-group">
+        <span class="room-label">Room Code</span>
+        <div class="room-code">{gs.roomCode}</div>
+      </div>
+      <button class="btn-rules-small" onclick={() => game.showRules = true}>
+        <Icon name="Rules" size={12} /> Aturan Main
+      </button>
+    </div>
+
+    <div class="others-list">
+      <div class="section-header">
+        <span class="section-label">Kondisi Meja Pertandingan</span>
+        <span class="player-count">{gs.players.length} Pemain</span>
+      </div>
+      <div class="players-stack">
+        {#each gs.players as p, i}
+          <div
+            class="other-player"
+            class:is-me={p.isMe}
+            class:current={gs.players[gs.currentPlayerIndex]?.id === p.id}
+            class:dead={p.influenceCount === 0}
+            class:selectable={p.isMe ? false : (!!pendingAction && p.influenceCount > 0)}
+            class:selected={selectedTarget === p.id}
+            style="--pc: {p.isMe ? 'var(--text-muted)' : (gs.players[gs.currentPlayerIndex]?.id === p.id ? 'var(--accent-gold)' : 'transparent')};"
+            onclick={() => { if (!p.isMe && pendingAction && p.influenceCount > 0) selectedTarget = p.id; }}
+          >
+            <div class="av-wrap">
+              <div class="av" style="background: {avatarColor(i)}18; color: {avatarColor(i)} ; border: 1px solid {avatarColor(i)}30;">
+                {initials(p.name)}
+              </div>
+              {#if gs.players[gs.currentPlayerIndex]?.id === p.id}
+                <div class="turn-dot"></div>
+              {/if}
+            </div>
+            
+            <div class="pinfo">
+              <div class="pname">
+                {p.name} {p.isMe ? '(Anda)' : ''}
+                {#if !p.connected}<span class="disc">DC</span>{/if}
+              </div>
+              <div class="pcoins">
+                <Icon name="Coins" size={11} class="icon-gold" /> {p.coins} Koin
+              </div>
+            </div>
+
+            <div class="cards-mini">
+              {#each { length: p.influenceCount } as _}
+                <div class="mini-card alive"></div>
+              {/each}
+              {#each p.revealedCards as ch}
+                <div class="mini-card dead" style="--cc:{charColors[ch]};" title={ch}>
+                  <Icon name={ch} size={10} />
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+
+    <div class="log-box">
+      <span class="section-label">Log Aktivitas Game</span>
+      <div class="log-entries">
+        {#each gs.log as entry}
+          <div class="log-entry">{entry}</div>
+        {/each}
+      </div>
+    </div>
+  </aside>
 </div>
 
 <style>
-  .layout { display: flex; gap: 1.5rem; min-height: 100vh; padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
-  aside { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1rem; }
+  :global(:root) {
+    --bg-card: #121214;
+    --bg-input: #1a1a1e;
+    --bg-elevated: #26262b;
+    --border-subtle: #2d2d34;
+    --text-main: #f4f4f7;
+    --text-dim: #a1a1aa;
+    --text-muted: #61616a;
+    --accent-gold: #f59e0b;
+    --accent-blue: #2563eb;
+    --accent-red: #dc2626;
+    --accent-green: #16a34a;
+    --radius-md: 14px;
+  }
+
+  .layout { 
+    display: flex; 
+    gap: 1.25rem; 
+    padding: 1rem; 
+    max-width: 1200px; 
+    margin: 0 auto; 
+    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--text-main);
+  }
+  
   main { flex: 1; display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+  aside { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1rem; }
 
-  .aside-header { 
-    display: flex; align-items: center; justify-content: space-between; 
-    padding: 1rem; background: var(--bg-card); border-radius: var(--radius-md);
+  /* Komponen Umum Card */
+  .card {
+    background: var(--bg-card);
     border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    position: relative;
   }
-  .room-code-group { display: flex; flex-direction: column; }
-  .room-label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); }
-  .room-code { font-size: 20px; font-weight: 800; letter-spacing: 0.05em; color: var(--accent-gold); }
   
-  .btn-rules-small {
-    background: var(--bg-input); border: 1px solid var(--border-muted);
-    color: var(--text-dim); font-size: 11px; font-weight: 700; padding: 6px 12px;
-    border-radius: 8px; display: flex; align-items: center; gap: 4px;
+  .section-label { 
+    font-size: 11px; 
+    font-weight: 700; 
+    text-transform: uppercase; 
+    letter-spacing: 0.05em; 
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    display: block;
   }
+  .icon-gold { color: var(--accent-gold); }
 
-  .others-list { 
-    background: var(--bg-card); border-radius: var(--radius-md); padding: 1rem; 
-    border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 10px;
-  }
-  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
-  .section-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
-  .player-count { font-size: 11px; font-weight: 800; background: var(--bg-input); padding: 2px 8px; border-radius: 6px; color: var(--text-dim); }
-
-  .other-player {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);
-    background: var(--bg-input); transition: all 0.2s;
-  }
-  .other-player.current { border-color: var(--accent-gold-soft); background: rgba(226, 180, 77, 0.03); box-shadow: 0 0 15px rgba(226, 180, 77, 0.1); }
-  .other-player.dead { opacity: 0.3; filter: grayscale(1); }
-  .other-player.selectable { cursor: pointer; border-color: var(--accent-blue); border-style: dashed; }
-  .other-player.selectable:hover { background: var(--accent-blue-soft); }
-  .other-player.selected { background: var(--accent-blue); border-color: #fff; }
-  .other-player.selected .pname, .other-player.selected .pcoins { color: #fff; }
-
-  .av-wrap { position: relative; }
-  .av { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
-  .turn-dot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; background: var(--accent-gold); border: 2px solid var(--bg-input); border-radius: 50%; box-shadow: 0 0 10px var(--accent-gold); }
-
-  .pinfo { flex: 1; min-width: 0; }
-  .pname { font-size: 14px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pcoins { font-size: 12px; color: var(--text-dim); font-weight: 500; display: flex; align-items: center; }
-  .disc { font-size: 9px; color: var(--accent-red); margin-left: 4px; font-weight: 800; text-transform: uppercase; }
-
-  .cards-mini { display: flex; gap: 4px; }
-  .mini-card { width: 10px; height: 16px; border-radius: 2px; }
-  .mini-card.alive { background: var(--accent-purple); opacity: 0.6; }
-  .mini-card.dead { background: var(--bg-card); border: 1px solid var(--border-muted); display: flex; align-items: center; justify-content: center; font-size: 8px; color: var(--cc); }
-
-  .log-box { 
-    background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); 
-    padding: 1rem; margin-top: auto; flex: 1; display: flex; flex-direction: column; max-height: 400px;
-  }
-  .log-entries { overflow-y: auto; flex: 1; padding-right: 4px; }
-  .log-entry { font-size: 12px; color: var(--text-dim); padding: 6px 0; border-bottom: 1px solid var(--border-subtle); line-height: 1.4; }
-  .log-entry:last-child { border-bottom: none; }
-
-  /* Main Area */
-  .status-bar { 
-    display: flex; align-items: center; justify-content: space-between; 
-    padding: 12px 1.25rem; background: var(--bg-card); border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-  }
-  .status-bar.my-turn { border-color: var(--accent-blue-soft); background: rgba(91, 162, 235, 0.05); }
-  .status-content { display: flex; align-items: center; gap: 10px; }
-  .pulse-icon { width: 8px; height: 8px; border-radius: 50%; }
-  .pulse-icon.blue { background: var(--accent-blue); box-shadow: 0 0 10px var(--accent-blue); animation: pulse 2s infinite; }
-  .pulse-icon.gray { background: var(--text-muted); }
-  @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.5; } }
-  .status-text { font-size: 14px; font-weight: 600; color: var(--text-main); }
-  .phase-badge { font-size: 10px; font-weight: 800; text-transform: uppercase; background: var(--bg-input); padding: 4px 10px; border-radius: 6px; color: var(--text-muted); }
-
-  .my-influence-card { padding: 1.5rem; }
-  .my-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; }
-  .my-coins { font-size: 28px; font-weight: 800; color: var(--accent-gold); line-height: 1; margin-top: 4px; display: flex; align-items: center; }
-  .my-coins small { font-size: 14px; font-weight: 600; color: var(--text-dim); margin-left: 4px; }
-  .lose-warning { font-size: 13px; font-weight: 700; color: #fff; background: var(--role-contessa); padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; }
-
-  .my-cards { display: flex; gap: 1rem; }
-  .influence-card {
-    flex: 1; height: 180px; border-radius: 16px; perspective: 1000px;
-    border: 2px solid var(--cc); background: color-mix(in srgb, var(--cc) 8%, var(--bg-input));
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative; overflow: hidden;
-  }
-  .influence-card:hover:not(.dead) { transform: translateY(-8px); box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 20px color-mix(in srgb, var(--cc) 30%, transparent); }
-  .influence-card.dead { border-color: var(--border-muted); background: var(--bg-elevated); opacity: 0.5; }
-  .influence-card.must-lose { animation: shake 0.5s infinite; border-color: var(--accent-red); box-shadow: 0 0 15px var(--accent-red-soft); }
-  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-
-  .card-inner { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 1rem; }
-  .char-icon { color: var(--cc); filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); }
-  .char-name { font-size: 16px; font-weight: 800; color: var(--cc); text-transform: uppercase; letter-spacing: 0.05em; }
-  .lose-btn { margin-top: 10px; background: #fff; color: var(--accent-red); padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; }
+  /* ========================================== */
+  /* PERBAIKAN GARIS KONSISTEN & SMOOTH (::before) */
+  /* ========================================== */
   
-  .dead-overlay { 
-    position: absolute; inset: 0; background: rgba(0,0,0,0.7); 
-    display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: grayscale(1) blur(2px);
-  }
-  .mb-2 { margin-bottom: 8px; }
-  .dead-text { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0.1em; }
-
-  /* All Cards Consistency */
-  .card { 
-    min-height: 340px; 
-  }
-  /* Actions */
-  .action-card, .exchange-card, .reaction-card { 
-    padding: 1.5rem; 
-  }
-  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1.25rem; }
-  .action-btn {
-    display: flex; align-items: center; gap: 12px; padding: 14px; 
-    background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
-    transition: all 0.2s; text-align: left;
-  }
-  .action-btn:hover:not(:disabled) { background: var(--bg-elevated); border-color: var(--border-bright); transform: translateY(-2px); }
-  .action-btn.gold { border-color: rgba(168, 85, 247, 0.2); background: rgba(168, 85, 247, 0.05); }
-  .action-btn.blue { border-color: rgba(59, 130, 246, 0.2); background: rgba(59, 130, 246, 0.05); }
-  .action-btn.green { border-color: rgba(34, 197, 94, 0.2); background: rgba(34, 197, 94, 0.05); }
-  .action-btn.red { border-color: rgba(6, 182, 212, 0.2); background: rgba(6, 182, 212, 0.05); }
-  .action-btn.coup { grid-column: span 2; border-color: var(--accent-purple-soft); background: rgba(168, 130, 255, 0.05); }
-  
-  .a-icon { 
-    width: 40px; 
-    height: 40px; 
+  /* 1. Modifikasi Tombol Aksi */
+  .action-btn-smooth {
     display: flex; 
     align-items: center; 
-    justify-content: center; 
-    background: var(--bg-card); 
-    border-radius: 10px;
+    gap: 12px; 
+    padding: 12px 12px 12px 18px; /* Ruang aman di kiri agar teks tidak menempel */
+    background: var(--bg-input); 
+    border: 1px solid var(--border-subtle); 
+    border-radius: var(--radius-md);
+    text-align: left; 
+    cursor: pointer; 
+    color: var(--text-main); 
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s, transform 0.1s, border-color 0.2s;
+  }
+  
+  /* Garis Vertikal Halus di Sisi Kiri */
+  .action-btn-smooth::before {
+    content: '';
+    position: absolute;
+    top: 4px;       /* Jarak aman atas */
+    bottom: 4px;    /* Jarak aman bawah */
+    left: 0;
+    width: 4px;
+    border-radius: 0 4px 4px 0; /* Lengkungan melorot ke dalam, super rapi */
+    background: var(--cc);
+    transition: all 0.2s ease;
+  }
+  
+  .action-btn-smooth:hover:not(:disabled) {
+    background: var(--bg-elevated);
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 1px 0 0 var(--cc);
+  }
+
+  .action-btn-smooth:hover:not(:disabled)::before {
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    border-radius: 0; /* Menyesuaikan sisi pinggir saat di-hover penuh */
+  }
+  
+  .action-btn-smooth:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .coup-style { 
+    grid-column: span 2; 
+    border: 1px dashed rgba(245, 158, 11, 0.3); 
+    background: rgba(245, 158, 11, 0.02); 
+  }
+  .coup-style:hover:not(:disabled) { background: rgba(245, 158, 11, 0.05); border-color: var(--accent-gold); }
+
+  .a-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .a-content { display: flex; flex-direction: column; min-width: 0; }
+  .a-title { font-size: 13px; font-weight: 600; }
+  .a-title small { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+  .a-desc { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 2. Modifikasi Kartu Pengaruh Utama (Atas) */
+  .influence-card {
+    flex: 1; 
+    height: 110px; 
+    border-radius: var(--radius-md);
     border: 1px solid var(--border-subtle);
-    color: #fff;
-    flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(0,0,0,0.15) 100%);
+    position: relative; 
+    overflow: hidden;
+    transition: all 0.2s ease;
   }
-  .action-btn.gold .a-icon { background: var(--role-duke); }
-  .action-btn.blue .a-icon { background: var(--role-captain); }
-  .action-btn.green .a-icon { background: var(--role-ambassador); }
-  .action-btn.red .a-icon { background: var(--role-assassin); }
-  .action-btn.coup .a-icon { background: var(--accent-purple); }
+
+  /* Garis Horizontal Atas yang Melengkung Halus */
+  .influence-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8px;      /* Jarak aman kiri */
+    right: 8px;     /* Jarak aman kanan */
+    height: 3px;
+    border-radius: 0 0 4px 4px; /* Sudut bawah garis melengkung */
+    background: var(--cc);
+    transition: all 0.2s ease;
+  }
+
+  .influence-card:hover:not(.dead) { 
+    transform: translateY(-2px); 
+    border-color: var(--cc); 
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  .influence-card:hover:not(.dead)::before {
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 0;
+  }
+
+  .influence-card.dead { opacity: 0.35; filter: grayscale(1); }
+  .influence-card.dead::before { background: var(--text-muted); }
   
-  .a-content { display: flex; flex-direction: column; gap: 2px; }
-  .a-title { font-size: 14px; font-weight: 700; color: #fff; }
-  .a-desc { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+  .card-inner { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 0.5rem; }
+  .char-icon { color: var(--cc); opacity: 0.85; }
+  .char-name { font-size: 12px; font-weight: 700; color: var(--text-main); }
+  .lose-btn { background: #fff; color: #000; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer; }
+  .dead-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--accent-red); }
+  .dead-text { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+
+  /* 3. Modifikasi Card List Pemain Lain (Sidebar/Meja) */
+  .other-player { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    padding: 8px 10px; 
+    background: var(--bg-input); 
+    border: 1px solid var(--border-subtle); 
+    border-radius: 10px; 
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Garis Vertikal Kiri pada List Pemain Meja */
+  .other-player::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 0;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--pc);
+    transition: all 0.2s ease;
+  }
+  .other-player.current::before { top: 0; bottom: 0; width: 4px; border-radius: 0; }
+
+  /* ========================================== */
+
+  /* Game Status Bar */
+  .status-bar { 
+    display: flex; align-items: center; justify-content: space-between; 
+    padding: 0.75rem 1rem; background: var(--bg-card); border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle); gap: 12px;
+  }
+  .status-bar.my-turn { border-color: rgba(37, 99, 235, 0.3); background: rgba(37, 99, 235, 0.04); }
+  .status-content { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .status-text { font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pulse-icon { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .pulse-icon.blue { background: var(--accent-blue); box-shadow: 0 0 10px var(--accent-blue); animation: calmBlink 2s infinite ease-in-out; }
+  .pulse-icon.gray { background: var(--text-muted); }
+  @keyframes calmBlink { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  .phase-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; background: var(--bg-input); padding: 4px 8px; border-radius: 6px; color: var(--text-dim); flex-shrink: 0; border: 1px solid var(--border-subtle); }
+
+  /* Info Aset */
+  .my-influence-card { display: flex; flex-direction: column; gap: 0.75rem; }
+  .my-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; }
+  .my-coins { font-size: 20px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 4px; }
+  .my-coins small { font-size: 12px; color: var(--text-dim); font-weight: 400; }
+  .lose-warning { font-size: 11px; font-weight: 600; background: var(--accent-red); padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+  .my-cards { display: flex; gap: 0.75rem; }
+
+  /* Action Grid System */
+  .action-card { display: flex; flex-direction: column; gap: 0.75rem; }
+  .action-sections { display: flex; flex-direction: column; gap: 1rem; }
+  .action-group { display: flex; flex-direction: column; gap: 0.5rem; }
+  .group-title { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .force-coup-banner { text-align: center; font-weight: 600; font-size: 11px; padding: 8px; background: rgba(220, 38, 38, 0.15); border: 1px solid var(--accent-red); border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  /* Target & Reactions Selection */
+  .target-selection { display: flex; flex-direction: column; gap: 0.75rem; }
+  .target-header { display: flex; align-items: center; gap: 10px; }
+  .back-btn { background: none; border: none; color: var(--accent-blue); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+  .target-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .target-btn { display: flex; flex-direction: column; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); cursor: pointer; color: var(--text-main); }
+  .target-btn.active { border-color: var(--accent-blue); background: rgba(37, 99, 235, 0.08); }
+  .t-name { font-size: 12px; font-weight: 600; }
+  .t-coins { font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 3px; margin-top: 2px; }
   
-  .force-coup-banner { margin-top: 1rem; text-align: center; color: #fff; font-weight: 700; font-size: 13px; padding: 10px; background: var(--role-contessa); border-radius: 8px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); display: flex; align-items: center; justify-content: center; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; }
+  .btn-primary { background: var(--accent-blue); color: #fff; }
+  .btn-secondary { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-subtle); }
+  .btn-danger { background: var(--accent-red); color: #fff; }
+  .btn-gold { background: var(--accent-gold); color: #000; }
+  .confirm-btn { margin-top: 0.5rem; padding: 10px; }
 
-  /* Target Selection */
-  .target-selection { display: flex; flex-direction: column; gap: 1.25rem; }
-  .target-header { display: flex; align-items: center; gap: 1rem; }
-  .back-btn { background: transparent; color: var(--accent-blue); font-size: 13px; font-weight: 700; display: flex; align-items: center; }
-  .target-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .target-btn { 
-    display: flex; flex-direction: column; gap: 4px; padding: 12px; 
-    background: var(--bg-input); border: 1px solid var(--border-muted); border-radius: var(--radius-md);
-  }
-  .target-btn.active { background: var(--accent-blue); border-color: #fff; }
-  .target-btn.active .t-name, .target-btn.active .t-coins { color: #fff; }
-  .t-name { font-size: 14px; font-weight: 700; }
-  .t-coins { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; }
-  .confirm-btn { padding: 14px; display: flex; align-items: center; justify-content: center; }
+  .reaction-card.dynamic-glow { border: 1px solid var(--accent-blue); box-shadow: 0 0 12px rgba(37, 99, 235, 0.1); }
+  .badge-alert { font-size: 9px; font-weight: 700; text-transform: uppercase; background: var(--accent-blue); color: #fff; padding: 3px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
+  .reaction-content { display: flex; flex-direction: column; gap: 0.75rem; }
+  .react-msg { font-size: 13px; line-height: 1.4; margin: 0; }
+  .target-tag { color: #fff; background: var(--accent-red); padding: 1px 4px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-left: 4px; }
+  .react-actions { display: flex; gap: 6px; }
+  .vertical-stack { flex-direction: column; gap: 0.75rem; }
+  .primary-reacts { display: flex; gap: 6px; }
+  .primary-reacts .btn { flex: 1; }
+  .block-options { border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; display: flex; flex-direction: column; gap: 6px; }
+  .tiny-label { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+  .block-btns { display: flex; gap: 6px; }
+  .block-btns .btn { flex: 1; }
 
-  /* Reactions */
-  .reaction-card { padding: 1.5rem; border-color: var(--accent-blue); border-width: 2px; }
-  .pulse-blue { box-shadow: 0 0 20px rgba(91, 162, 235, 0.2); animation: card-pulse 2s infinite; }
-  @keyframes card-pulse { 0% { box-shadow: 0 0 10px rgba(91, 162, 235, 0.1); } 50% { box-shadow: 0 0 25px rgba(91, 162, 235, 0.3); } 100% { box-shadow: 0 0 10px rgba(91, 162, 235, 0.1); } }
-  .reaction-header { margin-bottom: 12px; }
-  .reaction-content { margin-top: 1rem; }
-  .react-msg { font-size: 15px; color: var(--text-main); line-height: 1.6; margin-bottom: 1.25rem; }
-  .target-tag { color: var(--accent-red); font-weight: 800; background: var(--accent-red-soft); padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
-  .react-actions { display: flex; gap: 10px; }
-  .react-actions.vertical { flex-direction: column; gap: 1.5rem; }
-  .primary-reacts { display: flex; gap: 10px; }
-  .block-options { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-subtle); padding-top: 1rem; }
-  .tiny-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-  .block-btns { display: flex; gap: 10px; }
-
-  /* Exchange */
-  .exchange-card { padding: 1.5rem; border-color: var(--accent-green); }
-  .exchange-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 1.25rem; }
-  .ex-card {
-    width: 90px; height: 130px; border-radius: 12px;
-    border: 2px solid var(--border-muted); background: var(--bg-input);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-    transition: all 0.2s; position: relative;
-    padding: 0;
-  }
-  .ex-card.picked { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 12%, var(--bg-input)); transform: scale(1.05); }
-  .ex-icon { color: var(--cc); }
-  .ex-name { font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
+  /* Tukar Kartu */
+  .exchange-card { border-color: var(--accent-green); }
+  .exchange-grid { display: flex; gap: 6px; flex-wrap: wrap; margin: 0.5rem 0; }
+  .ex-card { width: 75px; height: 95px; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; position: relative; color: var(--text-main); padding: 0; }
+  .ex-card.picked { border-color: var(--cc); background: rgba(255,255,255,0.01); }
+  .ex-name { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
   .picked .ex-name { color: var(--cc); }
-  .ex-check { position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; background: var(--cc); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; }
+  .ex-icon { color: var(--text-muted); }
+  .picked .ex-icon { color: var(--cc); }
+  .ex-check { position: absolute; top: 4px; right: 4px; width: 14px; height: 14px; background: var(--cc); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
 
-  .waiting-box { 
-    display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 2rem; 
-    color: var(--text-dim); text-align: center; min-height: 340px;
-  }
-  .loader-dots { display: flex; gap: 4px; }
-  .loader-dots span { width: 6px; height: 6px; background: var(--accent-blue); border-radius: 50%; animation: dot-pulse 1.4s infinite; }
+  /* Loader */
+  .waiting-card-subtle { background: rgba(18, 18, 20, 0.5); border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; }
+  .waiting-box { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--text-dim); font-size: 12px; }
+  .loader-dots { display: flex; gap: 3px; }
+  .loader-dots span { width: 5px; height: 5px; background: var(--accent-blue); border-radius: 50%; animation: dotPulse 1.4s infinite ease-in-out; }
   .loader-dots span:nth-child(2) { animation-delay: 0.2s; }
   .loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse { 0%, 100% { transform: scale(0.8); opacity: 0.4; } 50% { transform: scale(1.2); opacity: 1; } }
 
-  @media (max-width: 850px) {
-    .layout { flex-direction: column; padding: 1rem; }
-    aside { width: 100%; order: 2; }
-    main { order: 1; }
-    .my-cards { overflow-x: auto; padding-bottom: 8px; }
-    .influence-card { min-width: 140px; }
+  /* Aside / Table Info */
+  .aside-header { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 0.6rem 0.75rem; border-radius: var(--radius-md); }
+  .room-code-group { display: flex; flex-direction: column; }
+  .room-label { font-size: 9px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+  .room-code { font-size: 15px; font-weight: 700; color: var(--accent-gold); }
+  .btn-rules-small { background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-dim); font-size: 11px; padding: 4px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+
+  .others-list { background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 0.85rem; border-radius: var(--radius-md); }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+  .player-count { font-size: 10px; background: var(--bg-input); padding: 2px 6px; border-radius: 4px; color: var(--text-dim); font-weight: 600; border: 1px solid var(--border-subtle); }
+  .players-stack { display: flex; flex-direction: column; gap: 5px; }
+
+  .other-player.dead { opacity: 0.3; filter: grayscale(1); }
+  .other-player.selectable { cursor: pointer; border: 1px dashed var(--accent-blue); }
+  .other-player.selected { background: rgba(37, 99, 235, 0.12); border-color: var(--accent-blue); }
+
+  .av-wrap { position: relative; }
+  .av { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+  .turn-dot { position: absolute; top: -1px; right: -1px; width: 6px; height: 6px; background: var(--accent-gold); border-radius: 50%; box-shadow: 0 0 6px var(--accent-gold); }
+  
+  .pinfo { flex: 1; min-width: 0; }
+  .pname { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pcoins { font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 2px; }
+  .disc { font-size: 8px; background: var(--accent-red); color: #fff; padding: 1px 3px; border-radius: 3px; margin-left: 4px; font-weight: 700; }
+
+  .cards-mini { display: flex; gap: 4px; align-items: center; }
+  .mini-card { width: 10px; height: 16px; border-radius: 3px; transition: all 0.2s; }
+  .mini-card.alive { background: #5b21b6; border: 1px solid #7c3aed; box-shadow: 0 0 4px rgba(124, 58, 237, 0.3); }
+  .mini-card.dead { background: #16161a; border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; color: var(--cc); }
+
+  .log-box { background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 0.85rem; border-radius: var(--radius-md); display: flex; flex-direction: column; max-height: 180px; }
+  .log-entries { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-top: 0.4rem; }
+  .log-entry { font-size: 11px; color: var(--text-dim); line-height: 1.3; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.01); }
+
+  /* ==================================================== */
+  /* RESPONSIVE LAYOUT UNTUK HP (MOBILE COMFORT ENGINE)   */
+  /* ==================================================== */
+  @media (max-width: 768px) {
+    .layout { 
+      flex-direction: column; 
+      padding: 0.5rem; 
+      gap: 0.75rem; 
+    }
+    
+    main { order: 1; gap: 0.75rem; }
+    aside { width: 100%; order: 2; gap: 0.75rem; }
+
+    .status-bar { padding: 0.6rem 0.75rem; }
+    .status-text { font-size: 12px; }
+    
+    .my-influence-card { padding: 0.85rem; }
+    .my-cards { gap: 0.5rem; }
+    .influence-card { height: 95px; }
+    .char-name { font-size: 11px; }
+
+    /* Grid Jempol HP: Pas & tidak terlalu renggang */
+    .action-grid { 
+      grid-template-columns: 1fr 1fr; 
+      gap: 5px; 
+    }
+    .coup-style { grid-column: span 2; }
+    .action-btn-smooth { padding: 10px 10px 10px 14px; gap: 8px; }
+    .a-title { font-size: 12px; }
+    .a-desc { font-size: 10px; }
+
+    /* Modifikasi Daftar Kondisi Meja HP: Mengalir Horizontal */
+    .players-stack {
+      flex-direction: row;
+      overflow-x: auto;
+      gap: 6px;
+      padding: 2px 2px 6px 2px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .other-player {
+      flex-shrink: 0;
+      width: 145px;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 10px 8px;
+    }
+
+    .other-player::before {
+      top: 0;
+      bottom: 0;
+      left: 4px;
+      right: 4px;
+      height: 3px;
+      width: auto;
+      border-radius: 0 0 3px 3px;
+    }
+
+    .av-wrap { margin-bottom: 4px; }
+    .cards-mini { margin-top: 6px; width: 100%; justify-content: flex-start; }
+    
+    .log-box { max-height: 130px; }
   }
 </style>

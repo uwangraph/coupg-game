@@ -1,5 +1,6 @@
 <script lang="ts">
   import { game } from "../lib/store.svelte";
+  import Icon from "../lib/Icon.svelte";
 
   const gs = $derived(game.gameState);
   const players = $derived(gs?.players ?? []);
@@ -103,7 +104,8 @@
   <div class="actions">
     {#if isHost}
       <button class="btn btn-gold full start-btn" disabled={!canStart} onclick={() => game.startGame()}>
-        {canStart ? "▶ Mulai Permainan" : `Butuh ${2 - players.length} pemain lagi`}
+        <Icon name={canStart ? "Plus" : "User"} size={20} class="mr-2" />
+        {canStart ? "Mulai Permainan" : `Butuh ${2 - players.length} pemain lagi`}
       </button>
     {:else}
       <div class="waiting-host-card">
@@ -116,7 +118,7 @@
 
     <div class="secondary-actions">
       <button class="btn btn-outline full" onclick={() => game.leave()}>
-        Keluar Room
+        <Icon name="LogOut" size={16} class="mr-2" /> Keluar Room
       </button>
       {#if isCreator}
         <button class="btn btn-danger-soft full" onclick={() => {
@@ -124,7 +126,7 @@
             game.deleteRoom();
           }
         }}>
-          🗑️ Hapus Room
+          <Icon name="Trash" size={16} class="mr-2" /> Hapus Room
         </button>
       {/if}
     </div>

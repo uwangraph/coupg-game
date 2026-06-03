@@ -4,6 +4,7 @@
   import Waiting from "./routes/Waiting.svelte";
   import Game from "./routes/Game.svelte";
   import GameOver from "./routes/GameOver.svelte";
+  import RulesModal from "./routes/RulesModal.svelte";
 
   const phase = $derived(game.gameState?.phase ?? null);
   const inGame = $derived(phase && phase !== "lobby");
@@ -51,6 +52,8 @@
   {#if game.error}
     <div class="error-toast">{game.error}</div>
   {/if}
+
+  <RulesModal isOpen={game.showRules} onClose={() => game.showRules = false} />
 </main>
 
 <style>
