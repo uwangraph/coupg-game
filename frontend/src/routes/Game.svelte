@@ -537,10 +537,13 @@
   .mb-2 { margin-bottom: 8px; }
   .dead-text { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0.1em; }
 
+  /* All Cards Consistency */
+  .card { 
+    min-height: 340px; 
+  }
   /* Actions */
   .action-card, .exchange-card, .reaction-card { 
     padding: 1.5rem; 
-    min-height: 340px; 
   }
   .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1.25rem; }
   .action-btn {
