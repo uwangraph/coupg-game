@@ -6,7 +6,7 @@ import type { Character, ClientMessage, GameStateView, ServerMessage } from "../
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
-class GameStore {
+export class GameStore {
   // Reactive state
   status = $state<ConnectionStatus>("disconnected");
   gameState = $state<GameStateView | null>(null);
@@ -14,6 +14,7 @@ class GameStore {
   roomCode = $state<string | null>(null);
   myName = $state<string>("");
   password = $state<string>("");
+  showRules = $state<boolean>(false);
 
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
