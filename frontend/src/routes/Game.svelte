@@ -538,7 +538,10 @@
   .dead-text { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #fff; letter-spacing: 0.1em; }
 
   /* Actions */
-  .action-card { padding: 1.5rem; min-height: 340px; }
+  .action-card, .exchange-card, .reaction-card { 
+    padding: 1.5rem; 
+    min-height: 340px; 
+  }
   .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1.25rem; }
   .action-btn {
     display: flex; align-items: center; gap: 12px; padding: 14px; 
@@ -624,7 +627,7 @@
 
   .waiting-box { 
     display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 2rem; 
-    color: var(--text-dim); text-align: center;
+    color: var(--text-dim); text-align: center; min-height: 340px;
   }
   .loader-dots { display: flex; gap: 4px; }
   .loader-dots span { width: 6px; height: 6px; background: var(--accent-blue); border-radius: 50%; animation: dot-pulse 1.4s infinite; }
