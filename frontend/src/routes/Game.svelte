@@ -97,6 +97,12 @@
   function initials(name: string) {
     return name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
   }
+
+  function copyRoomCode() {
+    if (gs.roomCode) {
+      navigator.clipboard.writeText(gs.roomCode);
+    }
+  }
 </script>
 
 <div class="layout">
@@ -385,7 +391,10 @@
     <div class="aside-header">
       <div class="room-code-group">
         <span class="room-label">Room Code</span>
-        <div class="room-code">{gs.roomCode}</div>
+        <div class="room-code-wrap" onclick={copyRoomCode} title="Klik untuk salin kode room">
+          <span class="room-code">{gs.roomCode}</span>
+          <Icon name="Copy" size={14} class="copy-icon" />
+        </div>
       </div>
       <button class="btn-rules-small" onclick={() => game.showRules = true}>
         <Icon name="Rules" size={12} /> Aturan Main
@@ -685,7 +694,11 @@
   .aside-header { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 0.6rem 0.75rem; border-radius: var(--radius-md); }
   .room-code-group { display: flex; flex-direction: column; }
   .room-label { font-size: 9px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+  .room-code-wrap { display: flex; align-items: center; gap: 6px; cursor: pointer; transition: opacity 0.2s; }
+  .room-code-wrap:hover { opacity: 0.8; }
   .room-code { font-size: 15px; font-weight: 700; color: var(--accent-gold); }
+  .copy-icon { color: var(--text-muted); transition: color 0.2s; }
+  .room-code-wrap:hover .copy-icon { color: var(--text-dim); }
   .btn-rules-small { background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-dim); font-size: 11px; padding: 4px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 
   .others-list { background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 0.85rem; border-radius: var(--radius-md); }

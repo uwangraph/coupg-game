@@ -29,7 +29,7 @@
         <div class="label">Kode Room</div>
         <div class="code-wrap" onclick={copyCode} title="Klik untuk salin">
           <span class="code">{gs?.roomCode ?? "…"}</span>
-          <span class="copy-icon">📋</span>
+          <Icon name="Copy" size={14} class="copy-icon" />
           {#if gs?.isPrivate}<span class="badge badge-purple" style="margin-left:8px;">Private</span>{/if}
         </div>
       </div>
@@ -148,7 +148,8 @@
   }
   .code-wrap:hover { opacity: 0.8; }
   .code { font-size: 32px; font-weight: 800; letter-spacing: 0.05em; color: var(--accent-gold); line-height: 1; }
-  .copy-icon { font-size: 18px; opacity: 0.5; }
+  .copy-icon { color: var(--text-muted); transition: color 0.2s; }
+  .code-wrap:hover .copy-icon { color: var(--text-dim); }
   
   .btn-rules-waiting {
     width: 100%;
