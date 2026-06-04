@@ -410,12 +410,13 @@
             onclick={() => { if (!p.isMe && pendingAction && p.influenceCount > 0) selectedTarget = p.id; }}
           >
             <div class="av-wrap">
-              <div class="av" style="background: {avatarColor(i)}18; color: {avatarColor(i)} ; border: 1px solid {avatarColor(i)}30;">
+              <div 
+                class="av" 
+                style="background: {avatarColor(i)}18; color: {avatarColor(i)} ; border: 1px solid {avatarColor(i)}30;"
+                class:current={gs.players[gs.currentPlayerIndex]?.id === p.id}
+              >
                 {initials(p.name)}
               </div>
-              {#if gs.players[gs.currentPlayerIndex]?.id === p.id}
-                <div class="turn-dot"></div>
-              {/if}
             </div>
             
             <div class="pinfo">
@@ -699,7 +700,7 @@
 
   .av-wrap { position: relative; }
   .av { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
-  .turn-dot { position: absolute; top: -1px; right: -1px; width: 6px; height: 6px; background: var(--accent-gold); border-radius: 50%; box-shadow: 0 0 6px var(--accent-gold); }
+  .av.current { border-color: var(--accent-gold) !important; border-width: 2px; box-shadow: 0 0 8px var(--accent-gold); }
   
   .pinfo { flex: 1; min-width: 0; }
   .pname { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
