@@ -100,7 +100,9 @@
 </script>
 
 <div class="layout">
+  <!-- AREA UTAMA PERMAINAN -->
   <main>
+    <!-- Status Turn & Fase Aktif -->
     <div class="status-bar" class:my-turn={isMyTurn}>
       <div class="status-content">
         <span class="pulse-icon" class:blue={isMyTurn} class:gray={!isMyTurn}></span>
@@ -115,6 +117,7 @@
       <div class="phase-badge">{phase.replace('_', ' ')}</div>
     </div>
 
+    <!-- Area Kartu & Koin Player -->
     <div class="card my-influence-card">
       <div class="my-header">
         <div class="my-info">
@@ -158,9 +161,11 @@
       </div>
     </div>
 
+    <!-- === ACTION DASHBOARD === -->
     {#if phase === "playing" && isMyTurn}
       <div class="card action-card">
         {#if pendingAction}
+          <!-- Pemilihan Target -->
           <div class="target-selection">
             <div class="target-header">
               <button class="back-btn" onclick={cancelTarget}>
@@ -185,27 +190,29 @@
             </button>
           </div>
         {:else}
+          <!-- Pilihan Menu Utama Aksi -->
           <span class="section-label">Pilih Langkah Strategis</span>
           
           <div class="action-sections">
+            <!-- Kelompok Aksi Dasar -->
             <div class="action-group">
               <div class="group-title">Aksi Dasar (Aman)</div>
               <div class="action-grid basic-grid">
-                <button class="action-btn-smooth" style="--cc: var(--text-dim);" onclick={() => game.income()} disabled={myCoins >= 10}>
+                <button class="action-btn-clean" style="--cc: var(--text-dim);" onclick={() => game.income()} disabled={myCoins >= 10}>
                   <div class="a-icon"><Icon name="Coins" size={18} /></div>
                   <div class="a-content">
                     <span class="a-title">Income</span>
                     <span class="a-desc">+1 Koin</span>
                   </div>
                 </button>
-                <button class="action-btn-smooth" style="--cc: var(--text-dim);" onclick={() => game.foreignAid()} disabled={myCoins >= 10}>
+                <button class="action-btn-clean" style="--cc: var(--text-dim);" onclick={() => game.foreignAid()} disabled={myCoins >= 10}>
                   <div class="a-icon"><Icon name="Globe" size={18} /></div>
                   <div class="a-content">
                     <span class="a-title">Foreign Aid</span>
                     <span class="a-desc">+2 Koin</span>
                   </div>
                 </button>
-                <button class="action-btn-smooth coup-style" style="--cc: var(--accent-gold);" onclick={() => selectTarget("coup")} disabled={myCoins < 7}>
+                <button class="action-btn-clean coup-style" style="--cc: var(--accent-gold);" onclick={() => selectTarget("coup")} disabled={myCoins < 7}>
                   <div class="a-icon"><Icon name="Coup" size={18} /></div>
                   <div class="a-content">
                     <span class="a-title">Coup d'État</span>
@@ -215,31 +222,32 @@
               </div>
             </div>
 
+            <!-- Kelompok Klaim Peran / Bluff -->
             <div class="action-group">
               <div class="group-title">Aksi Karakter (Bisa Gertak / Bluff)</div>
               <div class="action-grid character-grid">
-                <button class="action-btn-smooth" style="--cc: {charColors.Duke};" onclick={() => game.tax()} disabled={myCoins >= 10}>
+                <button class="action-btn-clean" style="--cc: {charColors.Duke};" onclick={() => game.tax()} disabled={myCoins >= 10}>
                   <div class="a-icon" style="color: {charColors.Duke};"><Icon name="Duke" size={18} /></div>
                   <div class="a-content">
                     <span class="a-title">Tax <small>(Duke)</small></span>
                     <span class="a-desc">+3 Koin</span>
                   </div>
                 </button>
-                <button class="action-btn-smooth" style="--cc: {charColors.Captain};" onclick={() => selectTarget("steal")} disabled={myCoins >= 10}>
+                <button class="action-btn-clean" style="--cc: {charColors.Captain};" onclick={() => selectTarget("steal")} disabled={myCoins >= 10}>
                   <div class="a-icon" style="color: {charColors.Captain};"><Icon name="Captain" size={18} /></div>
                   <div class="a-content">
                     <span class="a-title">Steal <small>(Captain)</small></span>
                     <span class="a-desc">Curi 2 Koin</span>
                   </div>
                 </button>
-                <button class="action-btn-smooth" style="--cc: {charColors.Ambassador};" onclick={() => game.exchange()} disabled={myCoins >= 10}>
+                <button class="action-btn-clean" style="--cc: {charColors.Ambassador};" onclick={() => game.exchange()} disabled={myCoins >= 10}>
                   <div class="a-icon" style="color: {charColors.Ambassador};"><Icon name="Ambassador" size={18} /></div>
                   <div class="a-content">
                     <span class="a-title">Exchange <small>(Ambassador)</small></span>
                     <span class="a-desc">Tukar Kartu</span>
                   </div>
                 </button>
-                <button class="action-btn-smooth" style="--cc: {charColors.Assassin};" onclick={() => selectTarget("assassinate")} disabled={myCoins < 3 || myCoins >= 10}>
+                <button class="action-btn-clean" style="--cc: {charColors.Assassin};" onclick={() => selectTarget("assassinate")} disabled={myCoins < 3 || myCoins >= 10}>
                   <div class="a-icon" style="color: {charColors.Assassin};"><Icon name="Assassin" size={18} /></div>
                   <div class="a-content">
                     <span class="a-title">Assassinate <small>(Assassin)</small></span>
@@ -259,6 +267,7 @@
       </div>
     {/if}
 
+    <!-- === REACTION BOARD === -->
     {#if (canChallenge || canBlockAction) && pending && !alreadyResponded}
       <div class="card reaction-card dynamic-glow">
         <div class="reaction-header">
@@ -317,6 +326,7 @@
       </div>
     {/if}
 
+    <!-- === EXCHANGE SELECTION === -->
     {#if phase === "exchange_select" && gs.loseInfluenceTarget === null}
       <div class="card exchange-card">
         <span class="section-label">Opsi Ambil Alih Deck (Pilih {aliveCount})</span>
@@ -350,6 +360,7 @@
       </div>
     {/if}
 
+    <!-- Indicator Tunggu Minimalis -->
     {#if phase === "playing" && !isMyTurn}
       <div class="waiting-card-subtle">
         <div class="waiting-box">
@@ -369,6 +380,7 @@
     {/if}
   </main>
 
+  <!-- SIDEBAR INFORMASI MEJA & LOGS -->
   <aside>
     <div class="aside-header">
       <div class="room-code-group">
@@ -380,6 +392,7 @@
       </button>
     </div>
 
+    <!-- Panel Status Seluruh Pemain -->
     <div class="others-list">
       <div class="section-header">
         <span class="section-label">Kondisi Meja Pertandingan</span>
@@ -394,7 +407,6 @@
             class:dead={p.influenceCount === 0}
             class:selectable={p.isMe ? false : (!!pendingAction && p.influenceCount > 0)}
             class:selected={selectedTarget === p.id}
-            style="--pc: {p.isMe ? 'var(--text-muted)' : (gs.players[gs.currentPlayerIndex]?.id === p.id ? 'var(--accent-gold)' : 'transparent')};"
             onclick={() => { if (!p.isMe && pendingAction && p.influenceCount > 0) selectedTarget = p.id; }}
           >
             <div class="av-wrap">
@@ -421,7 +433,7 @@
                 <div class="mini-card alive"></div>
               {/each}
               {#each p.revealedCards as ch}
-                <div class="mini-card dead" style="--cc:{charColors[ch]};" title={ch}>
+                <div class="mini-card dead" style="border-color: {charColors[ch]}40; color: {charColors[ch]};" title={ch}>
                   <Icon name={ch} size={10} />
                 </div>
               {/each}
@@ -431,6 +443,7 @@
       </div>
     </div>
 
+    <!-- Log Perjalanan Game -->
     <div class="log-box">
       <span class="section-label">Log Aktivitas Game</span>
       <div class="log-entries">
@@ -492,15 +505,15 @@
   .icon-gold { color: var(--accent-gold); }
 
   /* ========================================== */
-  /* PERBAIKAN GARIS KONSISTEN & SMOOTH (::before) */
+  /* GAYA BARU: CLEAN & MINIMALIS (TANPA GARIS) */
   /* ========================================== */
   
-  /* 1. Modifikasi Tombol Aksi */
-  .action-btn-smooth {
+  /* Tombol Aksi Bersih */
+  .action-btn-clean {
     display: flex; 
     align-items: center; 
     gap: 12px; 
-    padding: 12px 12px 12px 18px; /* Ruang aman di kiri agar teks tidak menempel */
+    padding: 12px 16px; 
     background: var(--bg-input); 
     border: 1px solid var(--border-subtle); 
     border-radius: var(--radius-md);
@@ -509,37 +522,18 @@
     color: var(--text-main); 
     position: relative;
     overflow: hidden;
-    transition: background 0.2s, transform 0.1s, border-color 0.2s;
+    transition: background 0.2s, transform 0.1s, border-color 0.2s, box-shadow 0.2s;
   }
   
-  /* Garis Vertikal Halus di Sisi Kiri */
-  .action-btn-smooth::before {
-    content: '';
-    position: absolute;
-    top: 4px;       /* Jarak aman atas */
-    bottom: 4px;    /* Jarak aman bawah */
-    left: 0;
-    width: 4px;
-    border-radius: 0 4px 4px 0; /* Lengkungan melorot ke dalam, super rapi */
-    background: var(--cc);
-    transition: all 0.2s ease;
-  }
-  
-  .action-btn-smooth:hover:not(:disabled) {
+  /* Efek feedback diganti dengan highlight border transparan bawaan variabel warna */
+  .action-btn-clean:hover:not(:disabled) {
     background: var(--bg-elevated);
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: var(--cc);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 1px 0 0 var(--cc);
-  }
-
-  .action-btn-smooth:hover:not(:disabled)::before {
-    top: 0;
-    bottom: 0;
-    width: 5px;
-    border-radius: 0; /* Menyesuaikan sisi pinggir saat di-hover penuh */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
   
-  .action-btn-smooth:disabled { opacity: 0.35; cursor: not-allowed; }
+  .action-btn-clean:disabled { opacity: 0.35; cursor: not-allowed; }
 
   .coup-style { 
     grid-column: span 2; 
@@ -554,46 +548,27 @@
   .a-title small { font-size: 11px; color: var(--text-muted); font-weight: 400; }
   .a-desc { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* 2. Modifikasi Kartu Pengaruh Utama (Atas) */
+  /* Kartu Pengaruh Utama (Atas) Tanpa Garis Atas */
   .influence-card {
     flex: 1; 
     height: 110px; 
     border-radius: var(--radius-md);
     border: 1px solid var(--border-subtle);
-    background: linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(0,0,0,0.15) 100%);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--cc) 8%, transparent) 0%, color-mix(in srgb, var(--cc) 3%, transparent) 100%);
     position: relative; 
     overflow: hidden;
     transition: all 0.2s ease;
   }
 
-  /* Garis Horizontal Atas yang Melengkung Halus */
-  .influence-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 8px;      /* Jarak aman kiri */
-    right: 8px;     /* Jarak aman kanan */
-    height: 3px;
-    border-radius: 0 0 4px 4px; /* Sudut bawah garis melengkung */
-    background: var(--cc);
-    transition: all 0.2s ease;
-  }
-
+  /* Saat di-hover, border luar langsung berubah warna sesuai karakter */
   .influence-card:hover:not(.dead) { 
     transform: translateY(-2px); 
     border-color: var(--cc); 
+    background: linear-gradient(180deg, color-mix(in srgb, var(--cc) 12%, transparent) 0%, color-mix(in srgb, var(--cc) 6%, transparent) 100%);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
   }
 
-  .influence-card:hover:not(.dead)::before {
-    left: 0;
-    right: 0;
-    height: 4px;
-    border-radius: 0;
-  }
-
   .influence-card.dead { opacity: 0.35; filter: grayscale(1); }
-  .influence-card.dead::before { background: var(--text-muted); }
   
   .card-inner { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 0.5rem; }
   .char-icon { color: var(--cc); opacity: 0.85; }
@@ -602,32 +577,25 @@
   .dead-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--accent-red); }
   .dead-text { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
 
-  /* 3. Modifikasi Card List Pemain Lain (Sidebar/Meja) */
+  /* List Pemain Lain (Sidebar) Tanpa Garis Kiri */
   .other-player { 
     display: flex; 
     align-items: center; 
     gap: 8px; 
-    padding: 8px 10px; 
+    padding: 10px 12px; 
     background: var(--bg-input); 
     border: 1px solid var(--border-subtle); 
     border-radius: 10px; 
     position: relative;
     overflow: hidden;
+    transition: border-color 0.2s, background 0.2s;
   }
 
-  /* Garis Vertikal Kiri pada List Pemain Meja */
-  .other-player::before {
-    content: '';
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 0;
-    width: 3px;
-    border-radius: 0 3px 3px 0;
-    background: var(--pc);
-    transition: all 0.2s ease;
+  /* Indikator giliran aktif sekarang murni menggunakan border emas halus */
+  .other-player.current {
+    border-color: var(--accent-gold);
+    background: rgba(245, 158, 11, 0.03);
   }
-  .other-player.current::before { top: 0; bottom: 0; width: 4px; border-radius: 0; }
 
   /* ========================================== */
 
@@ -768,13 +736,12 @@
     .influence-card { height: 95px; }
     .char-name { font-size: 11px; }
 
-    /* Grid Jempol HP: Pas & tidak terlalu renggang */
     .action-grid { 
       grid-template-columns: 1fr 1fr; 
       gap: 5px; 
     }
     .coup-style { grid-column: span 2; }
-    .action-btn-smooth { padding: 10px 10px 10px 14px; gap: 8px; }
+    .action-btn-clean { padding: 10px 12px; gap: 8px; }
     .a-title { font-size: 12px; }
     .a-desc { font-size: 10px; }
 
@@ -794,16 +761,6 @@
       flex-direction: column;
       align-items: flex-start;
       padding: 10px 8px;
-    }
-
-    .other-player::before {
-      top: 0;
-      bottom: 0;
-      left: 4px;
-      right: 4px;
-      height: 3px;
-      width: auto;
-      border-radius: 0 0 3px 3px;
     }
 
     .av-wrap { margin-bottom: 4px; }
